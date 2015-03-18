@@ -58,15 +58,9 @@ public class BCMBleService extends Service implements IConstants {
 	private int mLastBat = INVALID_INT;
 	private int mLastHr = INVALID_INT;
 	private String mLastRr = INVALID_STRING;
-	private int mLastAct = INVALID_INT;
-	private int mLastPa = INVALID_INT;
 
 	private BluetoothGattCharacteristic mCharBat;
 	private BluetoothGattCharacteristic mCharHr;
-	private BluetoothGattCharacteristic mCharCustom;
-	private boolean mDoBat = true;
-	private boolean mDoHr = true;
-	private boolean mDoCustom = true;
 	private boolean mSessionInProgress = false;
 	private long mSessionStartTime;
 
@@ -234,33 +228,13 @@ public class BCMBleService extends Service implements IConstants {
 			// // DEBUG
 			// Log.d(TAG, String.format("Received heart rate measurement: %d",
 			// mLastHr));
-			if (mDbAdapter != null && (mCharCustom == null || !mDoCustom)) {
+			if (mDbAdapter != null) {
 				mDbAdapter.createData(mLastHrDate, mSessionStartTime, mLastHr,
 						mLastRr, INVALID_INT, INVALID_INT);
 			}
 			intent.putExtra(EXTRA_HR, String.valueOf(values.getHr() + dateStr));
 			intent.putExtra(EXTRA_RR, values.getRr() + dateStr);
 			intent.putExtra(EXTRA_DATA, values.getInfo());
-		} else if (UUID_CUSTOM_MEASUREMENT.equals(characteristic.getUuid())) {
-			BCMCustomValues values = new BCMCustomValues(characteristic, date);
-			mLastAct = values.getActivity();
-			mLastPa = values.getPa();
-			// // DEBUG
-			// Log.d(TAG, String.format("Received custom measurement: %d %d",
-			// mLastAct, mLastPa));
-			if (mDbAdapter != null) {
-				if (mCharHr == null || !mDoHr) {
-					mDbAdapter.createData(date, mSessionStartTime, INVALID_INT,
-							INVALID_STRING, mLastAct, mLastPa);
-				} else {
-					mDbAdapter.createData(mLastHrDate, mSessionStartTime,
-							mLastHr, mLastRr, mLastAct, mLastPa);
-				}
-			}
-			intent.putExtra(EXTRA_ACT,
-					String.valueOf(values.getActivity() + dateStr));
-			intent.putExtra(EXTRA_PA, String.valueOf(values.getPa() + dateStr));
-			intent.putExtra(EXTRA_DATA, dateStr + values.getInfo());
 		} else if (UUID_BATTERY_LEVEL.equals(characteristic.getUuid())) {
 			mLastBat = characteristic.getIntValue(
 					BluetoothGattCharacteristic.FORMAT_UINT8, 0);
@@ -565,7 +539,7 @@ public class BCMBleService extends Service implements IConstants {
 	 * Initializes reading the battery level.
 	 */
 	public void readBatteryLevel() {
-		if (mCharBat == null || !mDoBat) {
+		if (mCharBat == null) {
 			return;
 		}
 		// Add it to the queue
@@ -588,15 +562,10 @@ public class BCMBleService extends Service implements IConstants {
 	 * @return If successful.
 	 */
 	public boolean startSession(BluetoothGattCharacteristic charBat,
-			BluetoothGattCharacteristic charHr,
-			BluetoothGattCharacteristic charCustom, boolean doBat,
-			boolean doHr, boolean doCustom) {
+			BluetoothGattCharacteristic charHr) {
 		Log.d(TAG, "startSession");
 		// Log.d(TAG, "startSession: mSessionState=" + mSessionState
 		// + " mTimeoutTimer=" + mTimeoutTimer);
-		mDoBat = doBat;
-		mDoHr = doHr;
-		mDoCustom = doCustom;
 		// // DEBUG
 		// String batVal = mCharBat == null ? "null" : String.format("%8x",
 		// mCharBat.hashCode());
@@ -628,9 +597,6 @@ public class BCMBleService extends Service implements IConstants {
 		if (mCharHr != null) {
 			setCharacteristicNotification(mCharHr, false);
 		}
-		if (mCharCustom != null) {
-			setCharacteristicNotification(mCharCustom, false);
-		}
 
 		// Clear any queues
 		while (descriptorWriteQueue.size() > 0) {
@@ -643,32 +609,21 @@ public class BCMBleService extends Service implements IConstants {
 		// Initialize for the new values
 		mCharBat = charBat;
 		mCharHr = charHr;
-		mCharCustom = charCustom;
 		mLastBat = INVALID_INT;
 		mLastHr = INVALID_INT;
 		mLastRr = INVALID_STRING;
 		mLastHrDate = new Date().getTime();
-		mLastAct = INVALID_INT;
-		mLastPa = INVALID_INT;
 		BluetoothGattDescriptor descriptor;
-		if (mCharBat != null && mDoBat) {
+		if (mCharBat != null) {
 			characteristicReadQueue.add(mCharBat);
 		}
-		if (mCharHr != null && mDoHr) {
+		if (mCharHr != null) {
 			descriptor = mCharHr
 					.getDescriptor(UUID_CLIENT_CHARACTERISTIC_CONFIG);
 			descriptor
 					.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
 			descriptorWriteQueue.add(descriptor);
 			setCharacteristicNotification(mCharHr, true);
-		}
-		if (mCharCustom != null && mDoCustom) {
-			descriptor = mCharCustom
-					.getDescriptor(UUID_CLIENT_CHARACTERISTIC_CONFIG);
-			descriptor
-					.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-			descriptorWriteQueue.add(descriptor);
-			setCharacteristicNotification(mCharCustom, true);
 		}
 
 		// Start the queues. Do writeDescriptors before any readCharacteristics
@@ -699,12 +654,8 @@ public class BCMBleService extends Service implements IConstants {
 		if (mSessionInProgress = true && mCharHr != null) {
 			setCharacteristicNotification(mCharHr, false);
 		}
-		if (mSessionInProgress = true && mCharCustom != null) {
-			setCharacteristicNotification(mCharCustom, false);
-		}
 		mCharBat = null;
 		mCharHr = null;
-		mCharCustom = null;
 		mLastHr = -1;
 		mLastRr = null;
 		mSessionInProgress = false;

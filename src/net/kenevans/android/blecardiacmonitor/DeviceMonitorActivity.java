@@ -40,21 +40,15 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 	private TextView mBat;
 	private TextView mHr;
 	private TextView mRr;
-	private TextView mAct;
-	private TextView mPa;
 	private TextView mStatus;
 	private String mDeviceName;
 	private String mDeviceAddress;
 	private BCMBleService mBLECardiacBleService;
 	private boolean mConnected = false;
 	private BCMDbAdapter mDbAdapter;
-	private boolean mDoBat = true;
-	private boolean mDoHr = true;
-	private boolean mDoCustom = true;
 	private File mDataDir;
 	private BluetoothGattCharacteristic mCharBat;
 	private BluetoothGattCharacteristic mCharHr;
-	private BluetoothGattCharacteristic mCharCustom;
 	private CancelableCountDownTimer mTimer;
 
 	/**
@@ -66,7 +60,8 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 				IBinder service) {
 			Log.d(TAG, "onServiceConnected: " + mDeviceName + " "
 					+ mDeviceAddress);
-			mBLECardiacBleService = ((BCMBleService.LocalBinder) service).getService();
+			mBLECardiacBleService = ((BCMBleService.LocalBinder) service)
+					.getService();
 			if (!mBLECardiacBleService.initialize()) {
 				String msg = "Unable to initialize Bluetooth";
 				Log.e(TAG, msg);
@@ -127,7 +122,8 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 			} else if (BCMBleService.ACTION_GATT_SERVICES_DISCOVERED
 					.equals(action)) {
 				Log.d(TAG, "onReceive: " + action);
-				onServicesDiscovered(mBLECardiacBleService.getSupportedGattServices());
+				onServicesDiscovered(mBLECardiacBleService
+						.getSupportedGattServices());
 			} else if (BCMBleService.ACTION_DATA_AVAILABLE.equals(action)) {
 				// Log.d(TAG, "onReceive: " + action);
 				displayData(intent);
@@ -184,8 +180,6 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 		mBat = (TextView) findViewById(R.id.bat_value);
 		mHr = (TextView) findViewById(R.id.hr_value);
 		mRr = (TextView) findViewById(R.id.rr_value);
-		mAct = (TextView) findViewById(R.id.act_value);
-		mPa = (TextView) findViewById(R.id.pa_value);
 		mStatus = (TextView) findViewById(R.id.status_value);
 		resetDataViews();
 
@@ -210,14 +204,9 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 		// Get the settings
 		SharedPreferences prefs = PreferenceManager
 				.getDefaultSharedPreferences(this);
-		mDoHr = prefs.getBoolean(PREF_MONITOR_HR, true);
-		mDoCustom = prefs.getBoolean(PREF_MONITOR_CUSTOM, true);
-		mDoBat = prefs.getBoolean(PREF_READ_BATTERY, true);
 		boolean manuallyDisconnected = prefs.getBoolean(
 				PREF_MANUALLY_DISCONNECTED, false);
 		// DEBUG
-		Log.d(TAG, "  mDoHr=" + mDoHr + " mDoCustom=" + mDoCustom + " mDoBat="
-				+ mDoBat);
 		Log.d(TAG, "Starting registerReceiver");
 		registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
 		if (!manuallyDisconnected && mDeviceAddress != null
@@ -336,19 +325,6 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 		case REQUEST_SETTINGS_CODE:
 			Log.d(TAG, "onActivityResult: REQUEST_SETTINGS_CODE resultCode="
 					+ resultCode);
-			// Get the settings
-			SharedPreferences prefs = PreferenceManager
-					.getDefaultSharedPreferences(this);
-			boolean doBat = prefs.getBoolean(PREF_READ_BATTERY, true);
-			boolean doHr = prefs.getBoolean(PREF_MONITOR_HR, true);
-			boolean doCustom = prefs.getBoolean(PREF_MONITOR_CUSTOM, true);
-			if (doHr == mDoHr && doCustom == mDoCustom && doBat == mDoBat) {
-				// No changes
-				break;
-			}
-			mDoBat = doBat;
-			mDoHr = doHr;
-			mDoCustom = doCustom;
 			// resetDataViews();
 			// if (mBLECardiacBleService != null &&
 			// mBLECardiacBleService.getSessionInProgress()) {
@@ -514,19 +490,6 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 				} else {
 					mBat.setText(value);
 				}
-			} else if (uuid.equals(UUID_CUSTOM_MEASUREMENT)) {
-				value = intent.getStringExtra(EXTRA_ACT);
-				if (value == null) {
-					mAct.setText("NA");
-				} else {
-					mAct.setText(value);
-				}
-				value = intent.getStringExtra(EXTRA_PA);
-				if (value == null) {
-					mPa.setText("NA");
-				} else {
-					mPa.setText(value);
-				}
 			}
 		} catch (Exception ex) {
 			Log.d(TAG, "Error displaying data", ex);
@@ -577,7 +540,8 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 	// */
 	// private void setEnabledFlags() {
 	// Log.d(TAG, this.getClass().getSimpleName() + ".setEnabledFlags");
-	// if (mBLECardiacBleService != null && mBLECardiacBleService.getSessionInProgress()) {
+	// if (mBLECardiacBleService != null &&
+	// mBLECardiacBleService.getSessionInProgress()) {
 	// int flags = DO_NOTHING;
 	// if (mDoBat) {
 	// flags |= DO_BAT;
@@ -599,23 +563,16 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 	 * @return Whether the service started the session successfully.
 	 */
 	boolean startSession() {
-		Log.d(TAG, "DeviceMonitorActivity.startSession: mDoBat=" + mDoBat
-				+ " mDoHr=" + mDoHr + " mDoCustom=" + mDoCustom);
-		Log.d(TAG, "  mCharBat=" + mCharBat + " mCharHr=" + mCharHr
-				+ " mCharCustom=" + mCharCustom);
-		boolean res = mBLECardiacBleService.startSession(mCharBat, mCharHr,
-				mCharCustom, mDoBat, mDoHr, mDoCustom);
-		String msg = "Doing";
-		if (mDoBat) {
-			msg += " BAT";
-		}
-		if (mDoHr) {
-			msg += " HR";
-		}
-		if (mDoCustom) {
-			msg += " CUSTOM";
-		}
-		mStatus.setText(msg);
+		Log.d(TAG, "  mCharBat=" + mCharBat + " mCharHr=" + mCharHr);
+		boolean res = mBLECardiacBleService.startSession(mCharBat, mCharHr);
+		// String msg = "Doing";
+		// if (mDoBat) {
+		// msg += " BAT";
+		// }
+		// if (mDoHr) {
+		// msg += " HR";
+		// }
+		// mStatus.setText(msg);
 		return res;
 	}
 
@@ -626,8 +583,6 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 		mBat.setText("NA");
 		mHr.setText("NA");
 		mRr.setText("NA");
-		mAct.setText("NA");
-		mPa.setText("NA");
 		mStatus.setText("");
 	}
 
@@ -646,8 +601,6 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 				mCharHr = characteristic;
 			} else if (characteristic.getUuid().equals(UUID_BATTERY_LEVEL)) {
 				mCharBat = characteristic;
-			} else if (characteristic.getUuid().equals(UUID_CUSTOM_MEASUREMENT)) {
-				mCharCustom = characteristic;
 			}
 			// Start a timer to wait for all characteristics to be accumulated
 			// Unless already started
@@ -659,8 +612,7 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 						CHARACTERISTIC_TIMER_INTERVAL) {
 					@Override
 					public void onTick(long millisUntilFinished) {
-						if (mCharCustom != null && mCharHr != null
-								&& mCharBat != null) {
+						if (mCharHr != null && mCharBat != null) {
 							boolean res = startSession();
 							if (res) {
 								mTimer.cancel();
@@ -729,7 +681,6 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 		UUID charUuid = null;
 		mCharBat = null;
 		mCharHr = null;
-		mCharCustom = null;
 		boolean hrFound = false, batFound = false, customFound = false;
 		for (BluetoothGattService gattService : gattServices) {
 			serviceUuid = gattService.getUuid();
@@ -755,22 +706,9 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 						onCharacteristicFound(characteristic);
 					}
 				}
-			} else if (serviceUuid.equals(UUID_HXM_CUSTOM_DATA_SERVICE)) {
-				customFound = true;
-				// Loop through available Characteristics
-				for (BluetoothGattCharacteristic characteristic : gattService
-						.getCharacteristics()) {
-					charUuid = characteristic.getUuid();
-					if (charUuid.equals(UUID_CUSTOM_MEASUREMENT)) {
-						mCharCustom = characteristic;
-						onCharacteristicFound(characteristic);
-					}
-				}
 			}
 		}
-		if (!hrFound || !batFound || !customFound || (mDoHr && mCharHr == null)
-				|| (mDoBat && mCharBat == null)
-				|| (mDoCustom && mCharCustom == null)) {
+		if (!hrFound || !batFound || mCharHr == null || mCharBat == null) {
 			String info = "Services and Characteristics not found:" + "\n";
 			if (!hrFound) {
 				info += "  Heart Rate" + "\n";
@@ -780,10 +718,6 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 				info += "  Battery" + "\n";
 			} else if (mCharBat == null) {
 				info += "    Battery Level" + "\n";
-			} else if (!customFound) {
-				info += "  HxM2 Custom Data Service" + "\n";
-			} else if (mDoCustom && mCharCustom == null) {
-				info += "    Custom Measurement" + "\n";
 			}
 			Utils.warnMsg(this, info);
 			Log.d(TAG, "onServicesDiscovered: " + info);
