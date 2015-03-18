@@ -681,7 +681,7 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 		UUID charUuid = null;
 		mCharBat = null;
 		mCharHr = null;
-		boolean hrFound = false, batFound = false, customFound = false;
+		boolean hrFound = false, batFound = false;
 		for (BluetoothGattService gattService : gattServices) {
 			serviceUuid = gattService.getUuid();
 			if (serviceUuid.equals(UUID_HEART_RATE_SERVICE)) {
