@@ -59,12 +59,8 @@ public class PlotActivity extends Activity implements IConstants {
 	private TimeSeriesCollection mPaDataset;
 	private TimeSeries mHrSeries;
 	private TimeSeries mRrSeries;
-	private TimeSeries mActSeries;
-	private TimeSeries mPaSeries;
 	private boolean mPlotHr = true;
 	private boolean mPlotRr = true;
-	private boolean mPlotAct = true;
-	private boolean mPlotPa = true;
 	private int mPlotInterval = PLOT_MAXIMUM_AGE;
 	private BCMDbAdapter mDbAdapter;
 	private File mDataDir;
@@ -175,8 +171,6 @@ public class PlotActivity extends Activity implements IConstants {
 				.getDefaultSharedPreferences(this);
 		mPlotHr = prefs.getBoolean(PREF_PLOT_HR, true);
 		mPlotRr = prefs.getBoolean(PREF_PLOT_RR, true);
-		mPlotAct = prefs.getBoolean(PREF_PLOT_ACT, true);
-		mPlotPa = prefs.getBoolean(PREF_PLOT_PA, true);
 		String stringVal = prefs.getString(PREF_PLOT_INTERVAL, null);
 		if (stringVal == null) {
 			mPlotInterval = PLOT_MAXIMUM_AGE;
@@ -444,8 +438,6 @@ public class PlotActivity extends Activity implements IConstants {
 		SolidColor ltgray = new SolidColor(Color.LTGRAY);
 		SolidColor hrColor = new SolidColor(Color.argb(255, 255, 50, 50));
 		SolidColor rrColor = new SolidColor(Color.argb(255, 0, 153, 255));
-		SolidColor actColor = new SolidColor(Color.argb(255, 255, 225, 0));
-		SolidColor paColor = new SolidColor(Color.argb(255, 255, 153, 51));
 
 		Font font = new Font("SansSerif", Typeface.NORMAL, 30);
 		Font titleFont = new Font("SansSerif", Typeface.BOLD, 36);
@@ -547,59 +539,6 @@ public class PlotActivity extends Activity implements IConstants {
 			axis.setTickLabelFont(font);
 			axis.setTickLabelPaintType(color);
 		}
-
-		// Activity
-		if (mPlotAct) {
-			final int axisNum = 3;
-			SolidColor color = actColor;
-			NumberAxis axis = new NumberAxis(null);
-			plot.setRangeAxis(axisNum, axis);
-			plot.setDataset(axisNum, mActDataset);
-			plot.mapDatasetToRangeAxis(axisNum, axisNum);
-			plot.setRangeAxisLocation(axisNum, AxisLocation.BOTTOM_OR_LEFT);
-			XYItemRenderer itemRenderer = new StandardXYItemRenderer();
-			itemRenderer.setSeriesPaintType(0, color);
-			itemRenderer.setBaseStroke(strokeSize);
-			itemRenderer.setSeriesStroke(0, strokeSize);
-			plot.setRenderer(axisNum, itemRenderer);
-
-			axis.setAutoRangeIncludesZero(true);
-			axis.setAutoRangeMinimumSize(.25);
-			// axis.setTickUnit(new NumberTickUnit(.1));
-			// yAxis1.setLabelFont(font);
-			// yAxis1.setLabelPaintType(color);
-			axis.setLabelPaintType(color);
-			axis.setAxisLinePaintType(color);
-			axis.setTickLabelFont(font);
-			axis.setTickLabelPaintType(color);
-		}
-
-		// PA
-		if (mPlotPa) {
-			final int axisNum = 4;
-			SolidColor color = paColor;
-			NumberAxis axis = new NumberAxis(null);
-			plot.setRangeAxis(axisNum, axis);
-			plot.setDataset(axisNum, mPaDataset);
-			plot.mapDatasetToRangeAxis(axisNum, axisNum);
-			plot.setRangeAxisLocation(axisNum, AxisLocation.BOTTOM_OR_RIGHT);
-			XYItemRenderer itemRenderer = new StandardXYItemRenderer();
-			itemRenderer.setSeriesPaintType(0, color);
-			itemRenderer.setBaseStroke(strokeSize);
-			itemRenderer.setSeriesStroke(0, strokeSize);
-			plot.setRenderer(axisNum, itemRenderer);
-
-			axis.setAutoRangeIncludesZero(true);
-			axis.setAutoRangeMinimumSize(.25);
-			// axis.setTickUnit(new NumberTickUnit(.1));
-			// yAxis1.setLabelFont(font);
-			// yAxis1.setLabelPaintType(color);
-			axis.setLabelPaintType(color);
-			axis.setAxisLinePaintType(color);
-			axis.setTickLabelFont(font);
-			axis.setTickLabelPaintType(color);
-		}
-
 		return chart;
 	}
 
@@ -646,37 +585,6 @@ public class PlotActivity extends Activity implements IConstants {
 				addRrValues(mRrSeries, date, strValue);
 			}
 		}
-		if (mPlotAct && mActSeries != null) {
-			value = Double.NaN;
-			strValue = intent.getStringExtra(EXTRA_ACT);
-			if (strValue != null && strValue.length() > 0) {
-				try {
-					value = Double.parseDouble(strValue);
-				} catch (NumberFormatException ex) {
-					value = Double.NaN;
-				}
-				if (value == INVALID_INT) {
-					value = Double.NaN;
-				}
-				mActSeries
-						.addOrUpdate(new FixedMillisecond(date), value / 100.);
-			}
-		}
-		if (mPlotPa && mPaSeries != null) {
-			value = Double.NaN;
-			strValue = intent.getStringExtra(EXTRA_PA);
-			if (strValue != null && strValue.length() > 0) {
-				try {
-					value = Double.parseDouble(strValue);
-				} catch (NumberFormatException ex) {
-					value = Double.NaN;
-				}
-				if (value == INVALID_INT) {
-					value = Double.NaN;
-				}
-				mPaSeries.addOrUpdate(new FixedMillisecond(date), value / 100.);
-			}
-		}
 	}
 
 	/**
@@ -700,22 +608,6 @@ public class PlotActivity extends Activity implements IConstants {
 		} else {
 			mRrSeries = null;
 		}
-		if (mPlotAct) {
-			mActSeries = new TimeSeries("ACT");
-			if (!mIsSession) {
-				mActSeries.setMaximumItemAge(mPlotInterval);
-			}
-		} else {
-			mActSeries = null;
-		}
-		if (mPlotPa) {
-			mPaSeries = new TimeSeries("PA");
-			if (!mIsSession) {
-				mPaSeries.setMaximumItemAge(mPlotInterval);
-			}
-		} else {
-			mPaSeries = null;
-		}
 		if (!mIsSession) {
 			mHrSeries.setMaximumItemAge(mPlotInterval);
 			mRrSeries.setMaximumItemAge(mPlotInterval);
@@ -723,7 +615,7 @@ public class PlotActivity extends Activity implements IConstants {
 		mLastRrTime = INVALID_DATE;
 		mLastRrUpdateTime = INVALID_DATE;
 		Cursor cursor = null;
-		int nHrItems = 0, nRrItems = 0, nActItems = 0, nPaItems = 0;
+		int nHrItems = 0, nRrItems = 0;
 		int nErrors = 0;
 		boolean res;
 		try {
@@ -738,13 +630,11 @@ public class PlotActivity extends Activity implements IConstants {
 				int indexDate = cursor.getColumnIndex(COL_DATE);
 				int indexHr = mPlotHr ? cursor.getColumnIndex(COL_HR) : -1;
 				int indexRr = mPlotRr ? cursor.getColumnIndex(COL_RR) : -1;
-				int indexAct = mPlotAct ? cursor.getColumnIndex(COL_ACT) : -1;
-				int indexPa = mPlotPa ? cursor.getColumnIndex(COL_PA) : -1;
 
 				// Loop over items
 				cursor.moveToFirst();
 				long date = INVALID_DATE;
-				double hr, act, pa;
+				double hr;
 				String rrString;
 				while (cursor.isAfterLast() == false) {
 					date = cursor.getLong(indexDate);
@@ -767,24 +657,6 @@ public class PlotActivity extends Activity implements IConstants {
 						if (!res) {
 							nErrors++;
 						}
-					}
-					if (indexAct > -1) {
-						act = cursor.getInt(indexAct);
-						if (act == INVALID_INT) {
-							act = Double.NaN;
-						}
-						mActSeries.addOrUpdate(new FixedMillisecond(date),
-								act / 100.);
-						nActItems++;
-					}
-					if (indexPa > -1) {
-						pa = cursor.getInt(indexPa);
-						if (pa == INVALID_INT) {
-							pa = Double.NaN;
-						}
-						mPaSeries.addOrUpdate(new FixedMillisecond(date),
-								pa / 100.);
-						nPaItems++;
 					}
 					cursor.moveToNext();
 				}
@@ -811,16 +683,6 @@ public class PlotActivity extends Activity implements IConstants {
 					+ " items nErrors=" + nErrors);
 			mRrDataset = new TimeSeriesCollection();
 			mRrDataset.addSeries(mRrSeries);
-		}
-		if (mPlotAct) {
-			Log.d(TAG, "ACT dataset created with " + nActItems + " items");
-			mActDataset = new TimeSeriesCollection();
-			mActDataset.addSeries(mActSeries);
-		}
-		if (mPlotPa) {
-			Log.d(TAG, "PA dataset created with " + nPaItems + " items");
-			mPaDataset = new TimeSeriesCollection();
-			mPaDataset.addSeries(mPaSeries);
 		}
 	}
 
