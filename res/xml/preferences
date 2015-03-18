@@ -1,0 +1,51 @@
+<PreferenceScreen
+        xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+            android:title="@string/monitor_preferences">
+        <CheckBoxPreference
+                android:key="monitorHrPreference"
+                android:defaultValue="true"
+                android:title="@string/title_hr_preference"
+                android:summary="@string/summary_hr_preference" />
+        <CheckBoxPreference
+                android:key="monitorCustomPreference"
+                android:defaultValue="true"
+                android:title="@string/title_custom_preference"
+                android:summary="@string/summary_custom_preference" />
+        <CheckBoxPreference
+                android:key="readBatteryPreference"
+                android:defaultValue="true"
+                android:title="@string/title_battery_preference"
+                android:summary="@string/summary_battery_preference" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+            android:title="@string/plot_preferences">
+        <CheckBoxPreference
+                android:key="plotHrPreference"
+                android:defaultValue="true"
+                android:title="@string/title_plot_hr_preference"
+                android:summary="@string/summary_plot_hr_preference" />
+        <CheckBoxPreference
+                android:key="plotRrPreference"
+                android:defaultValue="true"
+                android:title="@string/title_plot_rr_preference"
+                android:summary="@string/summary_plot_rr_preference" />
+        <CheckBoxPreference
+                android:key="plotActPreference"
+                android:defaultValue="true"
+                android:title="@string/title_plot_act_preference"
+                android:summary="@string/summary_plot_act_preference" />
+        <CheckBoxPreference
+                android:key="plotPaPreference"
+                android:defaultValue="true"
+                android:title="@string/title_plot_pa_preference"
+                android:summary="@string/summary_plot_pa_preference" />
+        <EditTextPreference
+                android:key="plotIntervalPreference"
+                android:defaultValue="5"
+                android:title="@string/title_plot_interval_preference"
+                android:summary="@string/summary_plot_interval_preference"
+                android:dialogTitle="@string/dialog_title_plot_interval_preference" />
+    </PreferenceCategory>
+</PreferenceScreen>

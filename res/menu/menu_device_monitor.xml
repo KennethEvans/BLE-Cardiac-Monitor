@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/menu_connect"
+          android:title="@string/menu_connect"
+          android:orderInCategory="100"
+          android:showAsAction="ifRoom|withText"/>
+    <item android:id="@+id/menu_disconnect"
+          android:title="@string/menu_disconnect"
+          android:orderInCategory="101"
+          android:showAsAction="ifRoom|withText"/>
+    <item android:id="@+id/menu_plot"
+          android:title="@string/menu_plot"
+          android:icon="@drawable/ic_action_plot"
+          android:orderInCategory="1"
+          android:showAsAction="ifRoom"/>
+    <item android:id="@+id/menu_session_manager"
+          android:title="@string/menu_session_manager"
+          android:orderInCategory="2"
+          android:showAsAction="never"/>
+    <item android:id="@+id/menu_select_device"
+          android:title="@string/menu_select_device"
+          android:orderInCategory="3"
+          android:showAsAction="never"/>
+    <item android:id="@+id/menu_read_battery_level"
+          android:title="@string/menu_read_battery_level"
+          android:orderInCategory="4"
+          android:showAsAction="never"/>
+    <item android:id="@+id/menu_settings"
+          android:title="@string/menu_settings"
+          android:orderInCategory="50"
+          android:showAsAction="never"/>
+</menu>
