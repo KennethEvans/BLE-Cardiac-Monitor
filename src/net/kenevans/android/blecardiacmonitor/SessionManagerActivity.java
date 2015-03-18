@@ -356,16 +356,13 @@ public class SessionManagerActivity extends ListActivity implements IConstants {
 		Cursor cursor = null;
 		int nErrors = 0;
 		try {
-			cursor = mDbAdapter
-					.fetchAllHrRrActPaDateDataForStartDate(startDate);
+			cursor = mDbAdapter.fetchAllHrRrDateDataForStartDate(startDate);
 			int indexDate = cursor.getColumnIndex(COL_DATE);
 			int indexHr = cursor.getColumnIndex(COL_HR);
 			int indexRr = cursor.getColumnIndex(COL_RR);
-			int indexAct = cursor.getColumnIndex(COL_ACT);
-			int indexPa = cursor.getColumnIndex(COL_PA);
 			// Loop over items
 			cursor.moveToFirst();
-			String dateStr, hrStr, rrStr, actStr, paStr, line;
+			String dateStr, hrStr, rrStr, line;
 			long dateNum = INVALID_DATE;
 			while (cursor.isAfterLast() == false) {
 				dateStr = INVALID_STRING;
@@ -381,17 +378,8 @@ public class SessionManagerActivity extends ListActivity implements IConstants {
 				if (indexRr > -1) {
 					rrStr = cursor.getString(indexRr);
 				}
-				actStr = INVALID_STRING;
-				if (indexAct > -1) {
-					actStr = cursor.getString(indexAct);
-				}
-				paStr = INVALID_STRING;
-				if (indexPa > -1) {
-					paStr = cursor.getString(indexPa);
-				}
 				line = dateStr + SAVE_SESSION_DELIM + hrStr
-						+ SAVE_SESSION_DELIM + rrStr + SAVE_SESSION_DELIM
-						+ actStr + SAVE_SESSION_DELIM + paStr + "\n";
+						+ SAVE_SESSION_DELIM + rrStr + "\n";
 				out.write(line);
 				cursor.moveToNext();
 			}
@@ -576,16 +564,14 @@ public class SessionManagerActivity extends ListActivity implements IConstants {
 			int indexStartDate = cursor.getColumnIndex(COL_START_DATE);
 			int indexHr = cursor.getColumnIndex(COL_HR);
 			int indexRr = cursor.getColumnIndex(COL_RR);
-			int indexAct = cursor.getColumnIndex(COL_ACT);
-			int indexPa = cursor.getColumnIndex(COL_PA);
 			// Loop over items
 			cursor.moveToFirst();
 			String rr, info = "";
 			long dateNum, startDateNum;
-			int hr, act, pa;
+			int hr;
 			while (cursor.isAfterLast() == false) {
 				dateNum = startDateNum = INVALID_DATE;
-				hr = act = pa = INVALID_INT;
+				hr = INVALID_INT;
 				rr = " ";
 				if (indexDate > -1) {
 					try {
@@ -619,25 +605,9 @@ public class SessionManagerActivity extends ListActivity implements IConstants {
 						rr = " ";
 					}
 				}
-				if (indexAct > -1) {
-					try {
-						act = cursor.getInt(indexAct);
-					} catch (Exception ex) {
-						// Do nothing
-					}
-				}
-				if (indexPa > -1) {
-					try {
-						pa = cursor.getInt(indexPa);
-					} catch (Exception ex) {
-						// Do nothing
-					}
-				}
-				info = String.format(Locale.US, "%d%s%d%s%d%s%s%s%d%s%d%s\n",
-						dateNum, SAVE_DATABASE_DELIM, startDateNum,
-						SAVE_DATABASE_DELIM, hr, SAVE_DATABASE_DELIM, rr,
-						SAVE_DATABASE_DELIM, act, SAVE_DATABASE_DELIM, pa,
-						SAVE_DATABASE_DELIM);
+				info = String.format(Locale.US, "%d%s%d%s%d%s%s%s\n", dateNum,
+						SAVE_DATABASE_DELIM, startDateNum, SAVE_DATABASE_DELIM,
+						hr, SAVE_DATABASE_DELIM, rr, SAVE_DATABASE_DELIM);
 				out.write(info);
 				cursor.moveToNext();
 			}
@@ -807,12 +777,12 @@ public class SessionManagerActivity extends ListActivity implements IConstants {
 				in = new BufferedReader(new FileReader(file));
 				String rr;
 				long dateNum, startDateNum;
-				int hr, act, pa;
+				int hr;
 				String[] tokens = null;
 				String line = null;
 				while ((line = in.readLine()) != null) {
 					dateNum = startDateNum = INVALID_DATE;
-					hr = act = pa = INVALID_INT;
+					hr = INVALID_INT;
 					rr = " ";
 					mLineNumber++;
 					tokens = line.trim().split(SAVE_DATABASE_DELIM);
@@ -824,7 +794,7 @@ public class SessionManagerActivity extends ListActivity implements IConstants {
 					if (tokens[0].trim().startsWith("#")) {
 						continue;
 					}
-					hr = pa = act = 0;
+					hr = 0;
 					rr = "";
 					if (tokens.length < 4) {
 						// Utils.errMsg(this, "Found " + tokens.length
@@ -856,26 +826,9 @@ public class SessionManagerActivity extends ListActivity implements IConstants {
 								+ mLineNumber);
 					}
 					rr = tokens[3].trim();
-					if (tokens.length >= 5) {
-						try {
-							act = Integer.parseInt(tokens[4]);
-						} catch (Exception ex) {
-							Log.d(TAG,
-									"Integer.parseInt failed for act @ line "
-											+ mLineNumber);
-						}
-					}
-					if (tokens.length >= 6) {
-						try {
-							pa = Integer.parseInt(tokens[5]);
-						} catch (Exception ex) {
-							Log.d(TAG, "Integer.parseInt failed for pa @ line "
-									+ mLineNumber);
-						}
-					}
 					// Write the row
 					long id = mDbAdapter.createData(dateNum, startDateNum, hr,
-							rr, act, pa);
+							rr);
 					if (id < 0) {
 						mErrors++;
 					}

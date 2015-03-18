@@ -26,8 +26,7 @@ public class BCMDbAdapter implements IConstants {
 			+ DB_DATA_TABLE + " (_id integer primary key autoincrement, "
 			+ COL_DATE + " integer not null, " + COL_START_DATE
 			+ " integer not null, " + COL_HR + " integer not null, " + COL_RR
-			+ " text not null, " + COL_ACT + " integer not null," + COL_PA
-			+ " integer not null);";
+			+ " text not null);";
 
 	/**
 	 * Constructor - takes the context to allow the database to be
@@ -108,12 +107,9 @@ public class BCMDbAdapter implements IConstants {
 	 * @param startDate
 	 * @param hr
 	 * @param rr
-	 * @param activity
-	 * @param pa
 	 * @return
 	 */
-	public long createData(long date, long startDate, int hr, String rr,
-			int activity, int pa) {
+	public long createData(long date, long startDate, int hr, String rr) {
 		if (mDb == null) {
 			mActivity.runOnUiThread(new Runnable() {
 				@Override
@@ -129,8 +125,6 @@ public class BCMDbAdapter implements IConstants {
 		values.put(COL_START_DATE, startDate);
 		values.put(COL_HR, hr);
 		values.put(COL_RR, rr);
-		values.put(COL_ACT, activity);
-		values.put(COL_PA, pa);
 
 		return mDb.insert(DB_DATA_TABLE, null, values);
 	}
@@ -155,8 +149,8 @@ public class BCMDbAdapter implements IConstants {
 			return null;
 		}
 		return mDb.query(DB_DATA_TABLE, new String[] { COL_ID, COL_DATE,
-				COL_START_DATE, COL_HR, COL_RR, COL_ACT, COL_PA }, filter,
-				null, null, null, SORT_ASCENDING);
+				COL_START_DATE, COL_HR, COL_RR }, filter, null, null, null,
+				SORT_ASCENDING);
 	}
 
 	/**
@@ -181,8 +175,8 @@ public class BCMDbAdapter implements IConstants {
 	 */
 	public Cursor fetchData(long rowId) throws SQLException {
 		Cursor mCursor = mDb.query(true, DB_DATA_TABLE, new String[] { COL_ID,
-				COL_DATE, COL_START_DATE, COL_HR, COL_RR, COL_ACT, COL_PA },
-				COL_ID + "=" + rowId, null, null, null, null, null);
+				COL_DATE, COL_START_DATE, COL_HR, COL_RR }, COL_ID + "="
+				+ rowId, null, null, null, null, null);
 		if (mCursor != null) {
 			mCursor.moveToFirst();
 		}
@@ -198,20 +192,15 @@ public class BCMDbAdapter implements IConstants {
 	 * @param startDate
 	 * @param hr
 	 * @param rr
-	 * @param activity
-	 * @param pa
-	 * @param comment
 	 * @return
 	 */
 	public boolean updateData(long rowId, long date, long startDate, int hr,
-			String rr, int activity, int pa) {
+			String rr) {
 		ContentValues values = new ContentValues();
 		values.put(COL_DATE, date);
 		values.put(COL_START_DATE, startDate);
 		values.put(COL_HR, hr);
 		values.put(COL_RR, rr);
-		values.put(COL_ACT, activity);
-		values.put(COL_PA, pa);
 
 		return mDb.update(DB_DATA_TABLE, values, COL_ID + "=" + rowId, null) > 0;
 	}
@@ -232,9 +221,9 @@ public class BCMDbAdapter implements IConstants {
 				SORT_DESCENDING);
 	}
 
-	///////////////////////////////////////////////////////////////////////////
+	// /////////////////////////////////////////////////////////////////////////
 	// Get data for start date only (ForStartDate) ////////////////////////////
-	///////////////////////////////////////////////////////////////////////////
+	// /////////////////////////////////////////////////////////////////////////
 
 	/**
 	 * Deletes all data in the database for the interval corresponding to the
@@ -244,8 +233,8 @@ public class BCMDbAdapter implements IConstants {
 	 * @return
 	 */
 	public boolean deleteAllDataForStartDate(long start) {
-		return mDb.delete(DB_DATA_TABLE, COL_START_DATE + "=" + Long.toString(start),
-				null) > 0;
+		return mDb.delete(DB_DATA_TABLE,
+				COL_START_DATE + "=" + Long.toString(start), null) > 0;
 	}
 
 	/**
@@ -265,25 +254,26 @@ public class BCMDbAdapter implements IConstants {
 	}
 
 	/**
-	 * Return a Cursor over the HR, RR, Activity, and PA items in the database
-	 * having the given the start date
+	 * Return a Cursor over the HR and RR items in the database having the given
+	 * the start date
 	 * 
 	 * @param date
 	 * @return Cursor over items.
 	 */
-	public Cursor fetchAllHrRrActPaDateDataForStartDate(long date) {
+	public Cursor fetchAllHrRrDateDataForStartDate(long date) {
 		if (mDb == null) {
 			return null;
 		}
-		return mDb.query(DB_DATA_TABLE, new String[] { COL_DATE, COL_HR,
-				COL_RR, COL_ACT, COL_PA },
-				COL_START_DATE + "=" + Long.toString(date), null, null, null,
-				SORT_ASCENDING);
+		return mDb
+				.query(DB_DATA_TABLE,
+						new String[] { COL_DATE, COL_HR, COL_RR },
+						COL_START_DATE + "=" + Long.toString(date), null, null,
+						null, SORT_ASCENDING);
 	}
 
-	///////////////////////////////////////////////////////////////////////////
+	// /////////////////////////////////////////////////////////////////////////
 	// Get data for start date through end date (ForDate) /////////////////////
-	///////////////////////////////////////////////////////////////////////////
+	// /////////////////////////////////////////////////////////////////////////
 
 	/**
 	 * Return a Cursor over the HR items in the database for a given start and
@@ -321,46 +311,9 @@ public class BCMDbAdapter implements IConstants {
 						+ Long.toString(end), null, null, null, SORT_ASCENDING);
 	}
 
-	/**
-	 * Return a Cursor over the Activity and PA items in the database for a
-	 * given start and end times.
-	 * 
-	 * @param start
-	 * @param end
-	 * @return Cursor over items.
-	 */
-	public Cursor fetchAllActPaDateDataForDates(long start, long end) {
-		if (mDb == null) {
-			return null;
-		}
-		return mDb.query(DB_DATA_TABLE, new String[] { COL_DATE, COL_ACT,
-				COL_PA }, COL_DATE + ">=" + Long.toString(start) + " AND "
-				+ COL_DATE + "<=" + Long.toString(end), null, null, null,
-				SORT_ASCENDING);
-	}
-
-	/**
-	 * Return a Cursor over the HR, RR, Activity, and PA items in the database
-	 * for a given start and end times.
-	 * 
-	 * @param start
-	 * @param end
-	 * @return Cursor over items.
-	 */
-	public Cursor fetchAllHrRrActPaDateDataForDates(long start, long end) {
-		if (mDb == null) {
-			return null;
-		}
-		return mDb.query(DB_DATA_TABLE, new String[] { COL_DATE, COL_HR,
-				COL_RR, COL_ACT, COL_PA },
-				COL_DATE + ">=" + Long.toString(start) + " AND " + COL_DATE
-						+ "<=" + Long.toString(end), null, null, null,
-				SORT_ASCENDING);
-	}
-
-	///////////////////////////////////////////////////////////////////////////
+	// /////////////////////////////////////////////////////////////////////////
 	// Get data for start date and later (StartingAtDate) /////////////////////
-	///////////////////////////////////////////////////////////////////////////
+	// /////////////////////////////////////////////////////////////////////////
 
 	/**
 	 * Return a Cursor over the list of all items in the database for a given
@@ -374,8 +327,9 @@ public class BCMDbAdapter implements IConstants {
 			return null;
 		}
 		return mDb.query(DB_DATA_TABLE, new String[] { COL_ID, COL_DATE,
-				COL_START_DATE, COL_HR, COL_RR, COL_ACT, COL_PA }, COL_DATE
-				+ ">=" + Long.toString(date), null, null, null, SORT_ASCENDING);
+				COL_START_DATE, COL_HR, COL_RR },
+				COL_DATE + ">=" + Long.toString(date), null, null, null,
+				SORT_ASCENDING);
 	}
 
 	/**
@@ -394,39 +348,6 @@ public class BCMDbAdapter implements IConstants {
 						new String[] { COL_DATE, COL_HR, COL_RR }, COL_DATE
 								+ ">=" + Long.toString(date), null, null, null,
 						SORT_ASCENDING);
-	}
-
-	/**
-	 * Return a Cursor over the Activity and PA items in the database for a
-	 * given time and later.
-	 * 
-	 * @param date
-	 * @return Cursor over items.
-	 */
-	public Cursor fetchAllActPaDateDataStartingAtDate(long date) {
-		if (mDb == null) {
-			return null;
-		}
-		return mDb.query(DB_DATA_TABLE, new String[] { COL_DATE, COL_ACT,
-				COL_PA }, COL_DATE + ">=" + Long.toString(date), null, null,
-				null, SORT_ASCENDING);
-	}
-
-	/**
-	 * Return a Cursor over the HR, RR, Activity, and PA items in the database
-	 * for a given time and later.
-	 * 
-	 * @param date
-	 * @return Cursor over items.
-	 */
-	public Cursor fetchAllHrRrActPaDateDataStartingAtDate(long date) {
-		if (mDb == null) {
-			return null;
-		}
-		return mDb.query(DB_DATA_TABLE, new String[] { COL_DATE, COL_HR,
-				COL_RR, COL_ACT, COL_PA },
-				COL_DATE + ">=" + Long.toString(date), null, null, null,
-				SORT_ASCENDING);
 	}
 
 	/**

@@ -230,7 +230,7 @@ public class BCMBleService extends Service implements IConstants {
 			// mLastHr));
 			if (mDbAdapter != null) {
 				mDbAdapter.createData(mLastHrDate, mSessionStartTime, mLastHr,
-						mLastRr, INVALID_INT, INVALID_INT);
+						mLastRr);
 			}
 			intent.putExtra(EXTRA_HR, String.valueOf(values.getHr() + dateStr));
 			intent.putExtra(EXTRA_RR, values.getRr() + dateStr);

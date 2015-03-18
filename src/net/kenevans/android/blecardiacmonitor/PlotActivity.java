@@ -551,7 +551,6 @@ public class PlotActivity extends Activity implements IConstants {
 		Log.d(TAG, "updateChart");
 		String strValue;
 		double value = Double.NaN;
-		;
 		long date = intent.getLongExtra(EXTRA_DATE, INVALID_DATE);
 		if (date == INVALID_DATE) {
 			return;
@@ -592,6 +591,9 @@ public class PlotActivity extends Activity implements IConstants {
 	 */
 	private void createDatasets() {
 		Log.d(TAG, "Creating datasets");
+		if (!mPlotHr && !mPlotRr) {
+			Utils.errMsg(this, "Neither HR nor RR is selected to be plotted");
+		}
 		if (mPlotHr) {
 			mHrSeries = new TimeSeries("HR");
 			if (!mIsSession) {
@@ -608,10 +610,6 @@ public class PlotActivity extends Activity implements IConstants {
 		} else {
 			mRrSeries = null;
 		}
-		if (!mIsSession) {
-			mHrSeries.setMaximumItemAge(mPlotInterval);
-			mRrSeries.setMaximumItemAge(mPlotInterval);
-		}
 		mLastRrTime = INVALID_DATE;
 		mLastRrUpdateTime = INVALID_DATE;
 		Cursor cursor = null;
@@ -622,10 +620,10 @@ public class PlotActivity extends Activity implements IConstants {
 			if (mDbAdapter != null) {
 				if (mIsSession) {
 					cursor = mDbAdapter
-							.fetchAllHrRrActPaDateDataForStartDate(mPlotSessionStart);
+							.fetchAllHrRrDateDataForStartDate(mPlotSessionStart);
 				} else {
 					cursor = mDbAdapter
-							.fetchAllHrRrActPaDateDataStartingAtDate(mPlotStartTime);
+							.fetchAllHrRrDateDataStartingAtDate(mPlotStartTime);
 				}
 				int indexDate = cursor.getColumnIndex(COL_DATE);
 				int indexHr = mPlotHr ? cursor.getColumnIndex(COL_HR) : -1;

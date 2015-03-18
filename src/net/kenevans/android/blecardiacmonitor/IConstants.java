@@ -89,8 +89,6 @@ public interface IConstants {
 	public static final String PREF_READ_BATTERY = "readBatteryPreference";
 	public static final String PREF_PLOT_HR = "plotHrPreference";
 	public static final String PREF_PLOT_RR = "plotRrPreference";
-	public static final String PREF_PLOT_ACT = "plotActPreference";
-	public static final String PREF_PLOT_PA = "plotPaPreference";
 	public static final String PREF_PLOT_INTERVAL = "plotIntervalPreference";
 	public static final String PREF_MANUALLY_DISCONNECTED = "manuallyDisconnected";
 
@@ -143,10 +141,6 @@ public interface IConstants {
 	public static final String COL_HR = "hr";
 	/** Database column for the R-R. */
 	public static final String COL_RR = "rr";
-	/** Database column for the activity. */
-	public static final String COL_ACT = "activity";
-	/** Database column for the activity. */
-	public static final String COL_PA = "peakacceleration";
 	// /** Database column for the temporary flag. */
 	// public static final String COL_TMP = "temporary";
 	/** Prefix for the file name for saving the database. */
@@ -200,10 +194,6 @@ public interface IConstants {
 	public final static String EXTRA_HR = PACKAGE_NAME + ".extraHr";
 	/** The intent code for the R-R values. */
 	public final static String EXTRA_RR = PACKAGE_NAME + ".extraRr";
-	/** The intent code for the activity value. */
-	public final static String EXTRA_ACT = PACKAGE_NAME + ".extraAct";
-	/** The intent code for the peak acceleration. */
-	public final static String EXTRA_PA = PACKAGE_NAME + ".extraPa";
 	/** The intent code for the battery level. */
 	public final static String EXTRA_BAT = PACKAGE_NAME + ".extraBattery";
 	/** The intent code for a message. */
