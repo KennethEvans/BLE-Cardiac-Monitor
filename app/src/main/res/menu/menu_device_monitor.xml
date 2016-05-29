@@ -25,6 +25,9 @@
           android:title="@string/menu_read_battery_level"
           android:orderInCategory="4"
           android:showAsAction="never"/>
+    <item android:id="@+id/help"
+          android:orderInCategory="5"
+          android:title="@string/help_item" />
     <item android:id="@+id/menu_settings"
           android:title="@string/menu_settings"
           android:orderInCategory="50"

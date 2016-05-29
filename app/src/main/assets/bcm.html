@@ -1,0 +1,82 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>Application Information</title>
+</head>
+<body>
+<h3 align="center">BLE Cardiac Monitor</h3>
+<p align="left">This application connects to a Bluetooth Low Energy (BLE) heart monitor and displays the data in real time and also stores the data in a SQLite database for later retrieval. It requires a BLE monitor, not a classic Bluetooth heart monitor, and BLE requires Android 4.3.1 (API 18). BLE aims to keeps the data transfer low by transmitting as little data as possible and as infrequently as possible, which in turn keeps the battery drain low. This is perfectly fine for the information from a heart monitor, where the information is produced on the order of once per second, but would not be adequate for, say, streaming music or for streaming a complete electrocardiogram (ECG). </p>
+<p align="left">Most BLE heart monitors implement the standard BLE Heart Profile, which includes both the heart rate (HR) and the RR interval (RR or R-R). The R-R interval is the time between the sharp peaks in an ECG. (The various peaks or waves in an ECG are labeled P, Q, R, S, T, U, V, etc. The sharp, high value is the R peak, and is the easiest to detect.) If the HR is 60 beats per min, then the R-R interval averages 1 sec or 1000 ms. However, it varies from beat to beat, often in a regular pattern, and in the case of arrhythmia's can be irregular. There is, in fact, a whole science of heart rate variability (HRV). Check out Wikipedia, for example. The R-R values give you much more information than the HR. Most BLE heart monitor sports apps only monitor the HR. This one allows you to monitor both.</p>
+<p align="left">The database is kept on the internal SD card in a directory named BLE Cardiac Monitor, where it is visible to the user. Sessions can also be saved to there as comma-separated-value (CSV) files, and the database can also be saved to and restored from CSV files, which are also located there. You can back everything up by copying this directory to a safe place. There are also SQLite database managers on most platforms, so you can access the database away from your device as well and do your own things with the data, either from the database or the CSV files. </p>
+<p align="left">The interface consists of five screens:</p>
+<ul>
+  <li><a href="#blecardiacmonitor">BLE Cardiac Monitor Main Screen</a></li>
+  <li><a href="#bledevicescan">BLE Device Scan</a></li>
+  <li><a href="#sessions">Sessions</a></li>
+  <li><a href="#plot">HR and RR Plot</a></li>
+  <li><a href="#settings">Settings</a></li>
+</ul>
+<h3 align="left"><a name="blecardiacmonitor" id="blecardiacmonitor"></a>BLE Cardiac Monitor Main Screen </h3>
+<p align="left">This is the main screen. It shows the device name, address, state, battery level, current heart rate and  R-R value, and status messages (when they are available). It has the following menu items.</p>
+<p align="left"><strong>Plot</strong></p>
+<p align="left">Brings up the <a href="#plot">Plot</a> screen. </p>
+<p align="left"><strong>Connect or Disconnect</strong></p>
+<p align="left">If there is a valid device, you can connect or disconnect it via this item. The data collection is run via an Android service. When the service is running, there should be a notification icon in the title bar, whether the app interface is showing or not. In normal circumstances, the service runs in the background whenever the app has been started and not exited via the Back button.</p>
+<p align="left">The app  collects data and adds to the database only when connected.  If the device is connected when you exit the app, it will try to reconnect again when you restart. If it was disconnected manually via this item, then it will not automatically try to reconnect on a restart. Use this feature to avoid collecting data when you do not want to, for example, while you are examining sessions. </p>
+<p align="left"><strong>Session Manager</strong></p>
+<p align="left">Brings up the <a href="#bledevicescan">Session Manager</a> with a list of sessions in the database and allows you to do  things with them. </p>
+<p align="left"><strong>Select Device</strong></p>
+<p align="left">Brings up the <a href="#bledevicescan">BLE Device Scan</a> screen, where you can search for and select a heart monitor device. </p>
+<p align="left"><strong>Get Battery Level</strong></p>
+<p align="left">The app attempts to get the battery level when it connects, but doesn't automatically update it. Sometimes the level is not available then. Use this item to force an update. </p>
+<p align="left"><strong>Help</strong></p>
+<p align="left">Brings up this page. </p>
+<p align="left"><strong>Settings</strong></p>
+<p align="left">Brings up the <a href="#settings">Settings</a> screen. </p>
+<h3 align="left"><a name="bledevicescan" id="bledevicescan"></a>BLE Device Scan</h3>
+<p align="left">This screen scans for BLE devices and displays a list of the ones found. You  click on one to select it. The app remembers the last device, whether connected or not, so you may not need this screen often. It has the following menu items.</p>
+<p align="left"><strong>Refresh</strong></p>
+<p align="left">This item does nothing when selected but is an indicator that displays a progress icon when you are scanning and REFRESH otherwise. </p>
+<p align="left"><strong>Scan or Stop</strong></p>
+<p align="left">Starts or stops the scan. The scan lasts for 10 sec if not stopped manually. </p>
+<h3 align="left"><a name="sessions" id="sessions"></a>Sessions</h3>
+<p align="left">The Session Manager is where you manage the sessions. You can plot them and delete or save them in several ways. </p>
+<p align="left">A session consists of data entries with the same start time. A session starts and the start time is set when the Start item on the main screen is selected or automatically on a restart when the Stop button had not been pressed before the last exit via the Back button. It ends when the Stop item is selected, the app exits via the Back button, or something external happens (losing the connection, for example) that causes it to stop.</p>
+<p align="left">The session manager shows a list of the sessions with a checkbox before each item. The start time and duration are shown as well. Tapping an item in the list toggles the checked state. Multiple items can be selected, but some menu items, such as Plot, require that one and only one be selected. Most menu items operate only on the checked sessions. Saving and restoring the database ignore any check marks. </p>
+<p align="left">Note that typically the data are sent from the monitor device about once a second. There is one HR value and there may be anywhere from none to several  RR values in this interval, depending on the heart rate (a faster rate means more RR values). The RR values do not have a timestamp other than the one for the entire data packet. Therefore, determining the time at which the R peaks occurred is subject to some error. This is a limitation of the BLE specification, not the app. The intervals and the time of the packet should be accurate. The app makes intelligent guesses to keep the RR intervals in a packet correct and the intervals between packets reasonable. </p>
+<p align="left">These are the menu items. </p>
+<p align="left"><strong>Plot</strong></p>
+<p align="left">Plots the checked session. Only one can be checked for this option. If this session is still in progress, the plot will not update with any newer values. It will, however, show all the current values, and hence may be for a longer period than the duration shown, which was calculated when the list was created. </p>
+<p align="left"><strong>Refresh</strong></p>
+<p align="left">Refreshes the list. Check boxes will be cleared. If a session is still in progress, the duration of that session should change. </p>
+<p align="left"><strong>Delete</strong></p>
+<p align="left">Deletes the checked sessions. This action can not be undone. </p>
+<p align="left"><strong>Save Sessions</strong></p>
+<p align="left">Save the checked session as separate CSV files. The name is of the form BCM-yyyy-mm-dd-hh-mm-ss.csv, and the values correspond to the start time. The delimiter is a comma. The values are a timestamp, the HR value, and a space-separated list of RR values. The RR values are integers in units of 1/1024 sec, which is the raw data  from the device. </p>
+<p align="left"><strong>Save as Combined Session</strong></p>
+<p align="left">This is the same as Save Sessions except that all sessions are saved in a single file with a name of the form BCM-yyyy-mm-dd-hh-mm-ss-Combined.csv. There is a blank line between sessions. </p>
+<p align="left"><strong>Check All</strong></p>
+<p align="left">A convenience method to check all sessions. </p>
+<p align="left"><strong>Check None</strong></p>
+<p align="left">A convenience method to uncheck all sessions. </p>
+<p align="left"><strong>Save Database</strong></p>
+<p align="left">This is similar to saving a session except that all the data in the database are saved. It ignores any check marks. The name is of the form BCMDatabase-yyyy-mm-dd-hh-mm-ss.csv, and the values correspond to the time the file was created. The delimiter is a comma. The values are the time, the start time, the HR value, and a space-separated list of RR values. The times are an integer representing the time as the Java Date class stores it. The RR values are integers in units of 1/1024 sec, which is the raw data  from the device. </p>
+<p align="left"><strong>Restore Database</strong></p>
+<p align="left">The database can be restored from one of the files created by Save Database. You will be given a list of available saved database files in the app's data directory. This operation will cause all the current data in the database to be lost. </p>
+<h3 align="left"><a name="plot" id="plot"></a>HR and RR Plot</h3>
+<p align="left">Plotting is available in two ways. From the Main Screen, Plot gives an updating plot of values in real time as they are accumulated. All values for the last n seconds are shown. The plot interval, n, can be set in <a href="#settings">Settings</a>. From the Session Manager, Plot gives a plot of the values of the checked session at the time Plot was selected. If a session is still in progress, later values will not be seen in this case.</p>
+<p align="left">The plot can be zoomed using the usual two-finger gesture and panned with one finger. A double-click will restore it. The plot auto-scales to fit the data. If there are a lot of data, it make take a while for these operations to happen. </p>
+<p align="left">There are two menu items.</p>
+<p align="left"><strong>Refresh</strong></p>
+<p align="left">Recalculates the data in the plot and restores any zooming or panning. </p>
+<p align="left"><strong>View Info</strong></p>
+<p align="left">Displays some information about the plot and the screen. This is primarily for debugging purposes. </p>
+<h3 align="left"><a name="settings" id="settings"></a>Settings</h3>
+<p align="left">The Settings screen allows you to set if HR and/or RR axes are shown or not. You can also set the time interval for real-time plots. These settings are saved between sessions. </p>
+<h3 align="left"><a name="acknowledgement" id="acknowledgement"></a>Acknowledgement</h3>
+<p>The plotting uses AFreeChart.</p>
+<p><a href="https://github.com/johnjohndoe/AFreeChart">https://github.com/johnjohndoe/AFreeChart</a> </p>
+<p>&nbsp;</p>
+</body>
+</html>

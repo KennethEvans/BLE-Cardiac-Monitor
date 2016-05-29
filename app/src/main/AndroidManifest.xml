@@ -55,7 +55,9 @@
             android:label="@string/title_activity_settings"
             android:theme="@android:style/Theme.Holo" >
         </activity>
-        
+        <activity android:name=".InfoActivity" android:label="@string/help_title">
+        </activity>
+
         <service
             android:name="net.kenevans.android.blecardiacmonitor.BCMBleService"
             android:enabled="true" >

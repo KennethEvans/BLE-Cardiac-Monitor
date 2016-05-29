@@ -89,6 +89,12 @@
     <string name="summary_plot_interval_preference">The length of the real-time plot interval</string>
     <string name="dialog_title_plot_interval_preference">Enter the interval in min</string>
 
+    <!-- Info/Help -->
+    <string name="help_url_not_found">Cannot find Help URL</string>
+    <string name="help_item">Help</string>
+    <string name="help_title">Help</string>
+    <string name="help_show_error">Error showing help</string>
+
     <!-- Utils -->
     <string name="error">Error</string>
     <string name="exception">Exception</string>

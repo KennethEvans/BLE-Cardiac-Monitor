@@ -36,6 +36,11 @@ public interface IConstants {
 	/** Prefix for session names. Will be followed by a date and time. */
 	public static final String SESSION_NAME_PREFIX = "BCM-";
 
+	/**
+	 * Key for information URL sent to InfoActivity.
+	 */
+	String INFO_URL = "InformationURL";
+
 	/** Notification ID for managing notifications. */
 	public static final int NOTIFICATION_ID = 1;
 
