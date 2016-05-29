@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<lint>
-    <issue id="MenuTitle">
-        <ignore path="res/menu/menu_session_manager.xml" />
-    </issue>
-</lint>
