@@ -22,146 +22,132 @@
 package net.kenevans.android.blecardiacmonitor;
 
 import android.app.AlertDialog;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.telephony.SmsManager;
 import android.util.Log;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.PrintStream;
+
 public class Utils implements IConstants {
-	/**
-	 * General alert dialog.
-	 * 
-	 * @param context
-	 * @param title
-	 * @param msg
-	 */
-	public static void alert(Context context, String title, String msg) {
-		try {
-			AlertDialog alertDialog = new AlertDialog.Builder(context)
-					.setTitle(title)
-					.setMessage(msg)
-					.setPositiveButton(context.getText(R.string.ok),
-							new DialogInterface.OnClickListener() {
-								public void onClick(DialogInterface dialog,
-										int which) {
-									dialog.cancel();
-								}
-							}).create();
-			alertDialog.show();
-		} catch (Throwable t) {
-			Log.e(getContextTag(context), "Error using " + title
-					+ "AlertDialog\n" + t + "\n" + t.getMessage());
-		}
-	}
+    /**
+     * General alert dialog.
+     *
+     * @param context The context.
+     * @param title   The dialog title.
+     * @param msg     The dialog message.
+     */
+    public static void alert(Context context, String title, String msg) {
+        try {
+            AlertDialog alertDialog = new AlertDialog.Builder(context)
+                    .setTitle(title)
+                    .setMessage(msg)
+                    .setPositiveButton(context.getText(R.string.ok),
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog,
+                                                    int which) {
+                                    dialog.cancel();
+                                }
+                            }).create();
+            alertDialog.show();
+        } catch (Throwable t) {
+            Log.e(getContextTag(context), "Error using " + title
+                    + "AlertDialog\n" + t + "\n" + t.getMessage());
+        }
+    }
 
-	/**
-	 * Error message dialog.
-	 * 
-	 * @param context
-	 * @param msg
-	 */
-	public static void errMsg(Context context, String msg) {
-		Log.e(TAG, getContextTag(context) + msg);
-		alert(context, context.getText(R.string.error).toString(), msg);
-	}
+    /**
+     * Error message dialog.
+     *
+     * @param context The context.
+     * @param msg     The dialog message.
+     */
+    public static void errMsg(Context context, String msg) {
+        Log.e(TAG, getContextTag(context) + msg);
+        alert(context, context.getText(R.string.error).toString(), msg);
+    }
 
-	/**
-	 * Error message dialog.
-	 * 
-	 * @param context
-	 * @param msg
-	 */
-	public static void warnMsg(Context context, String msg) {
-		Log.w(TAG, getContextTag(context) + msg);
-		alert(context, context.getText(R.string.warning).toString(), msg);
-	}
+    /**
+     * Error message dialog.
+     *
+     * @param context The context.
+     * @param msg     The dialog message.
+     */
+    public static void warnMsg(Context context, String msg) {
+        Log.w(TAG, getContextTag(context) + msg);
+        alert(context, context.getText(R.string.warning).toString(), msg);
+    }
 
-	/**
-	 * Info message dialog.
-	 * 
-	 * @param context
-	 * @param msg
-	 */
-	public static void infoMsg(Context context, String msg) {
-		Log.i(TAG, getContextTag(context) + msg);
-		alert(context, context.getText(R.string.info).toString(), msg);
-	}
+    /**
+     * Info message dialog.
+     *
+     * @param context The context.
+     * @param msg     The dialog message.
+     */
+    public static void infoMsg(Context context, String msg) {
+        Log.i(TAG, getContextTag(context) + msg);
+        alert(context, context.getText(R.string.info).toString(), msg);
+    }
 
-	/**
-	 * Exception message dialog. Displays message plus the exception and
-	 * exception message.
-	 * 
-	 * @param context
-	 * @param msg
-	 * @param t
-	 */
-	public static void excMsg(Context context, String msg, Throwable t) {
-		String fullMsg = msg += "\n"
-				+ context.getText(R.string.exception).toString() + ": " + t
-				+ "\n" + t.getMessage();
-		Log.e(TAG, getContextTag(context) + msg);
-		alert(context, context.getText(R.string.exception).toString(), fullMsg);
-	}
+    /**
+     * Exception message dialog. Displays message plus the exception and
+     * exception message.
+     *
+     * @param context The context.
+     * @param msg     The dialog message.
+     * @param t       The throwable.
+     */
+    public static void excMsg(Context context, String msg, Throwable t) {
+        String fullMsg = msg += "\n"
+                + context.getText(R.string.exception).toString() + ": " + t
+                + "\n" + t.getMessage();
+        Log.e(TAG, getContextTag(context) + msg);
+        alert(context, context.getText(R.string.exception).toString(), fullMsg);
+    }
 
-	/**
-	 * Utility method to get a tag representing the Context to associate with a
-	 * log message.
-	 * 
-	 * @param context
-	 * @return
-	 */
-	public static String getContextTag(Context context) {
-		if (context == null) {
-			return "<???>: ";
-		}
-		return "Utils: " + context.getClass().getSimpleName() + ": ";
-	}
+    /**
+     * Utility method to get a tag representing the Context to associate with a
+     * log message.
+     *
+     * @param context The context.
+     * @return The context tag.
+     */
+    public static String getContextTag(Context context) {
+        if (context == null) {
+            return "<???>: ";
+        }
+        return "Utils: " + context.getClass().getSimpleName() + ": ";
+    }
 
-	/**
-	 * Determines whether this is a debug build or not. Can be used to decide
-	 * which Maps API key to use. Relies on android:debuggable being set
-	 * automatically by the build. If set manually (not necessary with current
-	 * tools), needs to be removed for release builds for this to work.
-	 * 
-	 * @param context
-	 * @return
-	 */
-	public static boolean isDebugBuild(Context context) {
-		boolean retVal = false;
-		try {
-			PackageManager pm = context.getPackageManager();
-			PackageInfo pi = pm.getPackageInfo(context.getPackageName(), 0);
+    /**
+     * Get the stack trace for a throwble as a String.
+     *
+     * @param t The throwable.
+     * @return The stack trace as a String.
+     */
+    public static String getStackTraceString(Throwable t) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PrintStream ps = new PrintStream(baos);
+        t.printStackTrace(ps);
+        ps.close();
+        return baos.toString();
+    }
 
-			retVal = ((pi.applicationInfo.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0);
-		} catch (Exception ex) {
-			retVal = false;
-		}
-		return retVal;
-	}
-
-	/**
-	 * Sends an SMS message.
-	 * 
-	 * @param context
-	 *            The Context for the sending Activity.
-	 * @param cls
-	 *            The Class of the sending Activity.
-	 * @param phoneNumber
-	 *            The number of the receiver.
-	 * @param message
-	 *            The message to be sent.
-	 */
-	public static void sendSMS(Context context, Class<?> cls,
-			String phoneNumber, String message) {
-		PendingIntent pi = PendingIntent.getActivity(context, 0, new Intent(
-				context, cls), 0);
-		SmsManager sms = SmsManager.getDefault();
-		sms.sendTextMessage(phoneNumber, null, message, pi, null);
-	}
+    /**
+     * Get the extension of a file.
+     *
+     * @param file The file.
+     * @return The extension without the dot.
+     */
+    public static String getExtension(File file) {
+        String ext = null;
+        String s = file.getName();
+        int i = s.lastIndexOf('.');
+        if (i > 0 && i < s.length() - 1) {
+            ext = s.substring(i + 1).toLowerCase();
+        }
+        return ext;
+    }
 
 }
