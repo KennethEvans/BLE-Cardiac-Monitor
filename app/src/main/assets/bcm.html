@@ -55,7 +55,9 @@
 <p align="left"><strong>Save Sessions</strong></p>
 <p align="left">Save the checked session as separate CSV files. The name is of the form BCM-yyyy-mm-dd-hh-mm-ss.csv, and the values correspond to the start time. The delimiter is a comma. The values are a timestamp, the HR value, and a space-separated list of RR values. The RR values are integers in units of 1/1024 sec, which is the raw data  from the device. </p>
 <p align="left"><strong>Save as Combined Session</strong></p>
-<p align="left">This is the same as Save Sessions except that all sessions are saved in a single file with a name of the form BCM-yyyy-mm-dd-hh-mm-ss-Combined.csv. There is a blank line between sessions. </p>
+<p align="left">This is the same as Save Sessions except that all sessions are saved in a single file with a name of the form BCM-yyyy-mm-dd-hh-mm-ss-Combined.csv. There is a blank line between sessions.</p>
+<p align="left"><strong>Save Sessions As GPX</strong></p>
+<p align="left">Save the checked session as separate GPX files.  The name is of the form BCM-yyyy-mm-dd-hh-mm-ss.gpx, and the values correspond to the start time. The session is saved as a track. All the trackpoints have latitude, longitude, and elevation equal to 0. The HR is in a Garmin TrackPointExtension. Applications that read GPX files with HR should be able to read the HR values as a function of time. </p>
 <p align="left"><strong>Check All</strong></p>
 <p align="left">A convenience method to check all sessions. </p>
 <p align="left"><strong>Check None</strong></p>
