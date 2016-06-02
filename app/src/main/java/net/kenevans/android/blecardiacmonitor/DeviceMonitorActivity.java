@@ -48,7 +48,6 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
     private BCMDbAdapter mDbAdapter;
     private BluetoothGattCharacteristic mCharBat;
     private BluetoothGattCharacteristic mCharHr;
-    private CancelableCountDownTimer mTimer;
 
     /**
      * Manages the service lifecycle.
@@ -602,61 +601,7 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
             } else if (characteristic.getUuid().equals(UUID_BATTERY_LEVEL)) {
                 mCharBat = characteristic;
             }
-            // Start a timer to wait for all characteristics to be accumulated
-            // Unless already started
-            if (mTimer == null) {
-                Log.d(TAG,
-                        "onCharacteristicFound: new CancelableCountDownTimer " +
-                                "created");
-                mTimer = new CancelableCountDownTimer(
-                        CHARACTERISTIC_TIMER_TIMEOUT,
-                        CHARACTERISTIC_TIMER_INTERVAL) {
-                    @Override
-                    public void onTick(long millisUntilFinished) {
-                        if (mCharHr != null && mCharBat != null) {
-                            boolean res = startSession();
-                            if (res) {
-                                mTimer.cancel();
-                                mTimer = null;
-                                // DEBUG
-                                Log.d(TAG,
-                                        "onTick: New session has been started" +
-                                                " with all characteristics " +
-                                                "found");
-                            } else {
-                                Log.d(TAG,
-                                        "onTick: Failed to start new session " +
-                                                "with all characteristics " +
-                                                "found");
-                            }
-                        }
-                    }
-
-                    @Override
-                    public void onFinish() {
-                        this.cancel();
-                        mTimer = null;
-                        // Start it anyway
-                        boolean res = startSession();
-                        Log.d(TAG,
-                                "onFinish: New session has been started " +
-                                        "anyway");
-                        if (!res) {
-                            runOnUiThread(new Runnable() {
-                                public void run() {
-                                    Log.d(TAG,
-                                            "onFinish: Failed to start new " +
-                                                    "session anyway");
-                                    Utils.errMsg(DeviceMonitorActivity.this,
-                                            "onFinish: Failed to start new " +
-                                                    "session");
-                                }
-                            });
-                        }
-                    }
-                };
-                mTimer.start();
-            }
+            startSession();
         }
     }
 
@@ -684,7 +629,6 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
             return;
         }
         // Loop through available GATT Services
-        mTimer = null;
         UUID serviceUuid;
         UUID charUuid;
         mCharBat = null;

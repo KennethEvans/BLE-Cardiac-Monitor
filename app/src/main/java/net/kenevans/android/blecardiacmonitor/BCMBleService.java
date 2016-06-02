@@ -154,7 +154,7 @@ public class BCMBleService extends Service implements IConstants {
                     if (characteristicReadQueue.size() > 0)
                         mBluetoothGatt.readCharacteristic
                                 (characteristicReadQueue
-                                .element());
+                                        .element());
                 }
 
                 @Override
@@ -183,7 +183,7 @@ public class BCMBleService extends Service implements IConstants {
                     else if (characteristicReadQueue.size() > 0)
                         mBluetoothGatt.readCharacteristic
                                 (characteristicReadQueue
-                                .element());
+                                        .element());
                 }
             };
 
@@ -493,8 +493,8 @@ public class BCMBleService extends Service implements IConstants {
     /**
      * Writes READ, NOTIFY, WRITE properties to the Log. Use for debugging.
      *
-     * @param charBat The BAT characteristic.
-     * @param charHr The HR characteristic.
+     * @param charBat    The BAT characteristic.
+     * @param charHr     The HR characteristic.
      * @param charCustom The custom characteristic.
      */
     @SuppressWarnings("unused")
@@ -592,7 +592,7 @@ public class BCMBleService extends Service implements IConstants {
      * Starts a session.
      *
      * @param charBat The BAT characteristic.
-     * @param charHr The HR characteristic.
+     * @param charHr  The HR characteristic.
      * @return If successful. (Always returns true)
      */
     public boolean startSession(BluetoothGattCharacteristic charBat,
@@ -621,7 +621,9 @@ public class BCMBleService extends Service implements IConstants {
         // + customVal);
         // Log.d(TAG, "  mDoBat=" + mDoBat + " mDoHr=" + mDoHr + " mDoCustom="
         // + mDoCustom);
-        mSessionStartTime = new Date().getTime();
+        if (!mSessionInProgress) {
+            mSessionStartTime = new Date().getTime();
+        }
 
         // // DEBUG Check permissions
         // checkPermissions(charBat, charHr, charCustom);
