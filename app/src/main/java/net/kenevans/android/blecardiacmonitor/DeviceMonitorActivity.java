@@ -46,7 +46,6 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
     private BCMBleService mBLECardiacBleService;
     private boolean mConnected = false;
     private BCMDbAdapter mDbAdapter;
-    private File mDataDir;
     private BluetoothGattCharacteristic mCharBat;
     private BluetoothGattCharacteristic mCharHr;
     private CancelableCountDownTimer mTimer;
@@ -197,11 +196,11 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
         bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
 
         // Open the database
-        mDataDir = getDataDirectory();
-        if (mDataDir == null) {
+        File dataDir = getDataDirectory();
+        if (dataDir == null) {
             return;
         }
-        mDbAdapter = new BCMDbAdapter(this, mDataDir);
+        mDbAdapter = new BCMDbAdapter(this, dataDir);
         mDbAdapter.open();
     }
 
@@ -310,7 +309,7 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
                             .getDefaultSharedPreferences(this).edit();
                     editor.putString(DEVICE_NAME_CODE, mDeviceName);
                     editor.putString(DEVICE_ADDRESS_CODE, mDeviceAddress);
-                    editor.commit();
+                    editor.apply();
                     ((TextView) findViewById(R.id.device_name))
                             .setText(mDeviceName);
                     ((TextView) findViewById(R.id.device_address))
@@ -369,13 +368,12 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
                 // Change the stored value (even if it is null)
                 SharedPreferences.Editor editor = prefs.edit();
                 editor.putString(PREF_DATA_DIRECTORY, dataDir.getPath());
-                editor.commit();
+                editor.apply();
             }
         }
         if (dataDir == null) {
             Utils.errMsg(this, "Data directory is null");
-        }
-        if (!dataDir.exists()) {
+        } else if (!dataDir.exists()) {
             boolean res = dataDir.mkdir();
             if (!res) {
                 Utils.errMsg(this, "Cannot find or create directory: "
@@ -389,7 +387,7 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
     /**
      * Updates the connection state view on the UI thread.
      *
-     * @param resourceId
+     * @param resourceId The resource ID.
      */
     private void updateConnectionState(final int resourceId) {
         runOnUiThread(new Runnable() {
@@ -488,43 +486,44 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
     /**
      * Displays the data from an ACTION_DATA_AVAILABLE callback.
      *
-     * @param intent
+     * @param intent The Intent.
      */
     private void displayData(Intent intent) {
-        String uuidString = null;
-        UUID uuid = null;
+        String uuidString;
+        UUID uuid;
         String value;
         try {
             uuidString = intent.getStringExtra(EXTRA_UUID);
             if (uuidString == null) {
-                mStatus.setText("Received null uuid");
+                mStatus.setText(R.string.null_uuid_msg);
                 return;
             }
             uuid = UUID.fromString(uuidString);
             if (uuid.equals(UUID_HEART_RATE_MEASUREMENT)) {
                 value = intent.getStringExtra(EXTRA_HR);
                 if (value == null) {
-                    mHr.setText("NA");
+                    mHr.setText(R.string.not_available);
                 } else {
                     mHr.setText(value);
                 }
                 value = intent.getStringExtra(EXTRA_RR);
                 if (value == null) {
-                    mRr.setText("NA");
+                    mRr.setText(R.string.not_available);
                 } else {
                     mRr.setText(value);
                 }
             } else if (uuid.equals(UUID_BATTERY_LEVEL)) {
                 value = intent.getStringExtra(EXTRA_BAT);
                 if (value == null) {
-                    mBat.setText("NA");
+                    mBat.setText(R.string.not_available);
                 } else {
                     mBat.setText(value);
                 }
             }
         } catch (Exception ex) {
             Log.d(TAG, "Error displaying data", ex);
-            mStatus.setText("Exception: " + ex.getMessage());
+            mStatus.setText(this.getString(R.string.exception_msg_format,
+                    ex.getMessage()));
             // Don't use Utils here as there may be many
             // Utils.excMsg(this, "Error displaying message", ex);
         }
@@ -534,58 +533,37 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
      * Sets the PREF_MANUALLY_DISCONNECTED preference in PreferenceManager
      * .getDefaultSharedPreferences.
      *
-     * @param state
+     * @param b The value for PREF_MANUALLY_DISCONNECTED.
      */
-    private void setManuallyDisconnected(boolean state) {
+    private void setManuallyDisconnected(boolean b) {
         SharedPreferences.Editor editor = PreferenceManager
                 .getDefaultSharedPreferences(this).edit();
-        editor.putBoolean(PREF_MANUALLY_DISCONNECTED, state);
-        editor.commit();
+        editor.putBoolean(PREF_MANUALLY_DISCONNECTED, b);
+        editor.apply();
     }
 
     /**
      * Displays the error from an ACTION_ERROR callback.
      *
-     * @param intent
+     * @param intent The Intent with the message for the error.
      */
     private void displayError(Intent intent) {
         String msg = null;
         try {
             msg = intent.getStringExtra(EXTRA_MSG);
             if (msg == null) {
-                mStatus.setText("Received null error message");
+                mStatus.setText(R.string.null_error_msg);
                 Utils.errMsg(this, "Received null error message");
                 return;
             }
             Utils.errMsg(this, msg);
         } catch (Exception ex) {
             Log.d(TAG, "Error displaying error", ex);
-            mStatus.setText("Exception: " + ex.getMessage());
+            mStatus.setText(this.getString(R.string.exception_msg_format,
+                    ex.getMessage()));
             Utils.excMsg(this, msg, ex);
         }
     }
-
-    // /**
-    // * Sets the enabled flags in the service from the values of mDoBat, mDoHr,
-    // * and mDoCustom.
-    // */
-    // private void setEnabledFlags() {
-    // Log.d(TAG, this.getClass().getSimpleName() + ".setEnabledFlags");
-    // if (mBLECardiacBleService != null &&
-    // mBLECardiacBleService.getSessionInProgress()) {
-    // int flags = DO_NOTHING;
-    // if (mDoBat) {
-    // flags |= DO_BAT;
-    // }
-    // if (mDoHr) {
-    // flags |= DO_HR;
-    // }
-    // if (mDoCustom) {
-    // flags |= DO_CUSTOM;
-    // }
-    // mBLECardiacBleService.setEnabledFlags(flags);
-    // }
-    // }
 
     /**
      * Starts a session using the proper starting Characteristics depending on
@@ -595,32 +573,23 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
      */
     boolean startSession() {
         Log.d(TAG, "  mCharBat=" + mCharBat + " mCharHr=" + mCharHr);
-        boolean res = mBLECardiacBleService.startSession(mCharBat, mCharHr);
-        // String msg = "Doing";
-        // if (mDoBat) {
-        // msg += " BAT";
-        // }
-        // if (mDoHr) {
-        // msg += " HR";
-        // }
-        // mStatus.setText(msg);
-        return res;
+        return mBLECardiacBleService.startSession(mCharBat, mCharHr);
     }
 
     /**
      * Resets the data view to show default values
      */
     public void resetDataViews() {
-        mBat.setText("NA");
-        mHr.setText("NA");
-        mRr.setText("NA");
+        mBat.setText(R.string.not_available);
+        mHr.setText(R.string.not_available);
+        mRr.setText(R.string.not_available);
         mStatus.setText("");
     }
 
     /**
      * Sets up read or notify for this characteristic if possible.
      *
-     * @param characteristic
+     * @param characteristic The Characteristic found.
      */
     private void onCharacteristicFound(
             BluetoothGattCharacteristic characteristic) {
@@ -694,7 +663,7 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
     /**
      * Make an IntentFilter for the actions in which we are interested.
      *
-     * @return
+     * @return The IntentFilter.
      */
     private static IntentFilter makeGattUpdateIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
@@ -708,7 +677,7 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
     /**
      * Called when services are discovered.
      *
-     * @param gattServices
+     * @param gattServices The list of Gatt services.
      */
     private void onServicesDiscovered(List<BluetoothGattService> gattServices) {
         if (gattServices == null) {
@@ -716,8 +685,8 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
         }
         // Loop through available GATT Services
         mTimer = null;
-        UUID serviceUuid = null;
-        UUID charUuid = null;
+        UUID serviceUuid;
+        UUID charUuid;
         mCharBat = null;
         mCharHr = null;
         boolean hrFound = false, batFound = false;

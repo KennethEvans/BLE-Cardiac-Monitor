@@ -38,10 +38,14 @@
     <string name="select_restore_file">Select File to Restore</string>
     <string name="delete_prompt">All existing data will be deleted and it may take a while</string>
     <string name="restoring_database_progress_text">Restoring&#8230;\n(Can take a long time)</string>
+    <string name="null_uuid_msg">Received null uuid</string>
+    <string name="null_error_msg">Received null error message</string>
 
     <!-- Service -->
     <string name="service_notification_title">BLE Cardiac Monitor</string>
     <string name="service_notification_text">"BCM BLE Service is running"</string>
+    <string name="exception_msg_format">Exception: %s</string>
+    <string name="not_available">NA</string>
 
     <!-- Menu items -->
     <string name="menu_connect">Connect</string>

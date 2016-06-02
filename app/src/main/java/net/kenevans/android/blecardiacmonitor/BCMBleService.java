@@ -497,6 +497,7 @@ public class BCMBleService extends Service implements IConstants {
      * @param charHr The HR characteristic.
      * @param charCustom The custom characteristic.
      */
+    @SuppressWarnings("unused")
     public void checkPermissions(BluetoothGattCharacteristic charBat,
                                  BluetoothGattCharacteristic charHr,
                                  BluetoothGattCharacteristic charCustom) {
@@ -592,7 +593,7 @@ public class BCMBleService extends Service implements IConstants {
      *
      * @param charBat The BAT characteristic.
      * @param charHr The HR characteristic.
-     * @return If successful.
+     * @return If successful. (Always returns true)
      */
     public boolean startSession(BluetoothGattCharacteristic charBat,
                                 BluetoothGattCharacteristic charHr) {
@@ -620,7 +621,6 @@ public class BCMBleService extends Service implements IConstants {
         // + customVal);
         // Log.d(TAG, "  mDoBat=" + mDoBat + " mDoHr=" + mDoHr + " mDoCustom="
         // + mDoCustom);
-        boolean res = true;
         mSessionStartTime = new Date().getTime();
 
         // // DEBUG Check permissions
@@ -668,8 +668,8 @@ public class BCMBleService extends Service implements IConstants {
                     .readCharacteristic(characteristicReadQueue.element());
         }
 
-        mSessionInProgress = res;
-        return res;
+        mSessionInProgress = true;
+        return true;
     }
 
     /**
@@ -685,7 +685,7 @@ public class BCMBleService extends Service implements IConstants {
             characteristicReadQueue.remove();
         }
         // Stop notifying for existing characteristics
-        if (mSessionInProgress = true && mCharHr != null) {
+        if (mSessionInProgress && mCharHr != null) {
             setCharacteristicNotification(mCharHr, false);
         }
         mCharBat = null;
