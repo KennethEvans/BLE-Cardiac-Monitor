@@ -555,7 +555,7 @@ public class SessionManagerActivity extends ListActivity implements IConstants {
 			SimpleDateFormat df = new SimpleDateFormat(format, Locale.US);
 			Date now = new Date();
 			String fileName = String.format(SAVE_DATABASE_FILENAME_TEMPLATE,
-					df.format(now), now.getTime());
+					df.format(now));
 			File file = new File(mDataDir, fileName);
 			FileWriter writer = new FileWriter(file);
 			out = new BufferedWriter(writer);

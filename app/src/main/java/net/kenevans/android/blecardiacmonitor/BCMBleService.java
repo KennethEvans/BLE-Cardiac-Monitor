@@ -516,9 +516,9 @@ public class BCMBleService extends Service implements IConstants {
         }
         if ((charBat.getProperties() & BluetoothGattCharacteristic
                 .PROPERTY_WRITE) == 0) {
-            Log.d(TAG, "incrementSessionState: charBat: Not Writeable");
+            Log.d(TAG, "incrementSessionState: charBat: Not Writable");
         } else {
-            Log.d(TAG, "incrementSessionState: charBat: Writeable");
+            Log.d(TAG, "incrementSessionState: charBat: Writable");
         }
 
         if ((charHr.getProperties() & BluetoothGattCharacteristic
@@ -535,9 +535,9 @@ public class BCMBleService extends Service implements IConstants {
         }
         if ((charHr.getProperties() & BluetoothGattCharacteristic
                 .PROPERTY_WRITE) == 0) {
-            Log.d(TAG, "incrementSessionState: charHr: Not Writeable");
+            Log.d(TAG, "incrementSessionState: charHr: Not Writable");
         } else {
-            Log.d(TAG, "incrementSessionState: charHr: Writeable");
+            Log.d(TAG, "incrementSessionState: charHr: Writable");
         }
 
         if ((charCustom.getProperties() & BluetoothGattCharacteristic
@@ -554,9 +554,9 @@ public class BCMBleService extends Service implements IConstants {
         }
         if ((charCustom.getProperties() & BluetoothGattCharacteristic
                 .PROPERTY_WRITE) == 0) {
-            Log.d(TAG, "incrementSessionState: charCustom: Not Writeable");
+            Log.d(TAG, "incrementSessionState: charCustom: Not Writable");
         } else {
-            Log.d(TAG, "incrementSessionState: charCustom: Writeable");
+            Log.d(TAG, "incrementSessionState: charCustom: Writable");
         }
     }
 
