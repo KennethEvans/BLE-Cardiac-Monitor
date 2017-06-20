@@ -1,12 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion '25.0.2'
+    compileSdkVersion 26
+    buildToolsVersion '26.0.0'
     defaultConfig {
         applicationId "net.kenevans.android.blecardiacmonitor"
         minSdkVersion 18
-        targetSdkVersion 23
+        targetSdkVersion 24
+        versionCode 6
+        versionName "4.0.0"
     }
     buildTypes {
         release {
@@ -19,6 +21,6 @@ android {
 }
 
 dependencies {
-    compile 'com.android.support:support-v4:23.4.0'
     compile files('libs/afreechart-0.0.4.jar')
+    compile 'com.android.support:support-v4:26.0.0-alpha1'
 }
