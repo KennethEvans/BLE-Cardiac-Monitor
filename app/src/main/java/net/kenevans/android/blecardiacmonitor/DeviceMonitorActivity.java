@@ -164,8 +164,14 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
         // reference to BluetoothAdapter through BluetoothManager.
         final BluetoothManager bluetoothManager = (BluetoothManager)
                 getSystemService(Context.BLUETOOTH_SERVICE);
-        BluetoothAdapter adapter = bluetoothManager.getAdapter();
+        if (bluetoothManager == null) {
+            String msg = getString(R.string.error_bluetooth_manager);
+            Utils.errMsg(this, msg);
+            Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+            return;
+        }
 
+        BluetoothAdapter adapter = bluetoothManager.getAdapter();
         // Checks if Bluetooth is supported on the device
         if (adapter == null) {
             String msg = getString(R.string.bluetooth_not_supported);
@@ -184,11 +190,11 @@ public class DeviceMonitorActivity extends Activity implements IConstants {
 
         ((TextView) findViewById(R.id.device_name)).setText(mDeviceName);
         ((TextView) findViewById(R.id.device_address)).setText(mDeviceAddress);
-        mConnectionState = (TextView) findViewById(R.id.connection_state);
-        mBat = (TextView) findViewById(R.id.bat_value);
-        mHr = (TextView) findViewById(R.id.hr_value);
-        mRr = (TextView) findViewById(R.id.rr_value);
-        mStatus = (TextView) findViewById(R.id.status_value);
+        mConnectionState = findViewById(R.id.connection_state);
+        mBat = findViewById(R.id.bat_value);
+        mHr = findViewById(R.id.hr_value);
+        mRr = findViewById(R.id.rr_value);
+        mStatus = findViewById(R.id.status_value);
         resetDataViews();
 
         Intent gattServiceIntent = new Intent(this, BCMBleService.class);

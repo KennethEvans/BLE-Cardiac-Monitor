@@ -11,6 +11,8 @@
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
     <string name="ble_not_supported">Bluetooth LE is not supported</string>
+    <string name="permission_coarse_location">Scanning disabled</string>string>
+
     <string name="label_data">Data: </string>
     <string name="label_device_name">Device name: </string>
     <string name="label_device_address">Device address: </string>
@@ -26,6 +28,9 @@
     <string name="connected">Connected</string>
     <string name="disconnected">Disconnected</string>
     <string name="bluetooth_not_supported">Bluetooth is not supported.</string>
+    <string name="error_bluetooth_manager">Bluetooth manager not found.</string>
+    <string name="error_bluetooth_adapter">Error getting Bluetooth adapter.</string>
+
     <string name="view_info">View Info</string>
     <string name="scan_prompt">The current device may not be found in the scan, since it is still connected.  Continue?</string>
     <string name="session_delete_prompt">Deleting %d sessions.  This cannot be undone.  Continue?</string>
@@ -49,7 +54,7 @@
 
     <!-- Menu items -->
     <string name="menu_connect">Connect</string>
-    <string name="menu_refresh"></string>
+    <string name="menu_refresh">Refresh</string>
     <string name="menu_disconnect">Disconnect</string>
     <string name="menu_scan">Scan</string>
     <string name="menu_stop">Stop</string>
