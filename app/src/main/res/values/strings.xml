@@ -11,7 +11,9 @@
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
     <string name="ble_not_supported">Bluetooth LE is not supported</string>
-    <string name="permission_coarse_location">Scanning disabled</string>string>
+    <string name="permission_coarse_location">Scanning disabled
+        \n\nACCESS_COARSE_LOCATION permission must be granted to scan for Bluetooth devices.
+        \n\nYou may have to grant this manually for BLE Explorer in Settings.</string>
 
     <string name="label_data">Data: </string>
     <string name="label_device_name">Device name: </string>
