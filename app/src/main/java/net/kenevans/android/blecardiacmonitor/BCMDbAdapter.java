@@ -31,7 +31,7 @@ public class BCMDbAdapter implements IConstants {
 	/**
 	 * Constructor - takes the context to allow the database to be
 	 * opened/created
-	 * 
+	 *
 	 * @param activity
 	 *            The context.
 	 * @param dataDir
@@ -46,7 +46,7 @@ public class BCMDbAdapter implements IConstants {
 	 * Open the database. If it cannot be opened, try to create a new instance
 	 * of the database. If it cannot be created, throw an exception to signal
 	 * the failure
-	 * 
+	 *
 	 * @return this (self reference, allowing this to be chained in an
 	 *         initialization call).
 	 * @throws SQLException
@@ -102,7 +102,7 @@ public class BCMDbAdapter implements IConstants {
 	 * Create new data using the parameters provided. If the data is
 	 * successfully created return the new rowId for that entry, otherwise
 	 * return a -1 to indicate failure.
-	 * 
+	 *
 	 * @param date
 	 * @param startDate
 	 * @param hr
@@ -131,7 +131,7 @@ public class BCMDbAdapter implements IConstants {
 
 	/**
 	 * Delete all the data and recreate the table.
-	 * 
+	 *
 	 * @return true if deleted, false otherwise.
 	 */
 	public void recreateDataTable() {
@@ -141,7 +141,7 @@ public class BCMDbAdapter implements IConstants {
 
 	/**
 	 * Return a Cursor over the list of all items in the database.
-	 * 
+	 *
 	 * @return Cursor over items.
 	 */
 	public Cursor fetchAllData(String filter) {
@@ -155,7 +155,7 @@ public class BCMDbAdapter implements IConstants {
 
 	/**
 	 * Delete the data with the given rowId.
-	 * 
+	 *
 	 * @param rowId
 	 *            id of data to delete
 	 * @return true if deleted, false otherwise.
@@ -166,7 +166,7 @@ public class BCMDbAdapter implements IConstants {
 
 	/**
 	 * Return a Cursor positioned at the data that matches the given rowId
-	 * 
+	 *
 	 * @param rowId
 	 *            id of entry to retrieve.
 	 * @return Cursor positioned to matching entry, if found.
@@ -186,7 +186,7 @@ public class BCMDbAdapter implements IConstants {
 	/**
 	 * Update the data using the details provided. The data to be updated is
 	 * specified using the rowId, and it is altered to use the values passed in.
-	 * 
+	 *
 	 * @param rowId
 	 * @param date
 	 * @param startDate
@@ -208,8 +208,7 @@ public class BCMDbAdapter implements IConstants {
 	/**
 	 * Return a Cursor over the list of start and ending times, sorted in
 	 * reverse order.
-	 * 
-	 * @param date
+	 *
 	 * @return Cursor over items.
 	 */
 	public Cursor fetchAllSessionStartEndData() {
@@ -228,7 +227,7 @@ public class BCMDbAdapter implements IConstants {
 	/**
 	 * Deletes all data in the database for the interval corresponding to the
 	 * given the start date.
-	 * 
+	 *
 	 * @param start
 	 * @return
 	 */
@@ -240,7 +239,7 @@ public class BCMDbAdapter implements IConstants {
 	/**
 	 * Return a Cursor over the HR items in the database having the given the
 	 * start date.
-	 * 
+	 *
 	 * @param date
 	 * @return Cursor over items.
 	 */
@@ -256,7 +255,7 @@ public class BCMDbAdapter implements IConstants {
 	/**
 	 * Return a Cursor over the HR and RR items in the database having the given
 	 * the start date
-	 * 
+	 *
 	 * @param date
 	 * @return Cursor over items.
 	 */
@@ -278,7 +277,7 @@ public class BCMDbAdapter implements IConstants {
 	/**
 	 * Return a Cursor over the HR items in the database for a given start and
 	 * end times.
-	 * 
+	 *
 	 * @param start
 	 * @param end
 	 * @return Cursor over items.
@@ -296,7 +295,7 @@ public class BCMDbAdapter implements IConstants {
 	/**
 	 * Return a Cursor over the HR and RR items in the database for a given
 	 * start and end times.
-	 * 
+	 *
 	 * @param start
 	 * @param end
 	 * @return Cursor over items.
@@ -318,7 +317,7 @@ public class BCMDbAdapter implements IConstants {
 	/**
 	 * Return a Cursor over the list of all items in the database for a given
 	 * time and later.
-	 * 
+	 *
 	 * @param date
 	 * @return Cursor over items.
 	 */
@@ -335,7 +334,7 @@ public class BCMDbAdapter implements IConstants {
 	/**
 	 * Return a Cursor over the HR and RR items in the database for a given time
 	 * and later.
-	 * 
+	 *
 	 * @param date
 	 * @return Cursor over items.
 	 */
@@ -356,7 +355,7 @@ public class BCMDbAdapter implements IConstants {
 	 * of using the Context.
 	 */
 	private static class DatabaseHelper extends SQLiteOpenHelper {
-		public DatabaseHelper(Context context, String dir) {
+		private DatabaseHelper(Context context, String dir) {
 			super(context, dir, null, DB_VERSION);
 		}
 

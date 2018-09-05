@@ -3,10 +3,10 @@ package net.kenevans.android.blecardiacmonitor;
 import android.bluetooth.BluetoothGattCharacteristic;
 
 public class HeartRateValues implements IConstants {
-    long date;
+    private long date;
     private int hr = INVALID_INT;
-    int sensorContact = INVALID_INT;
-    int ee = INVALID_INT;
+    private int sensorContact = INVALID_INT;
+    private int ee = INVALID_INT;
     private String rr = INVALID_STRING;
     private String info;
 
@@ -65,6 +65,16 @@ public class HeartRateValues implements IConstants {
                 rrString += " " + iVal;
             }
             rr = rrString.trim();
+            if (USE_CORSENSE_FIX) {
+                // Take out first value if 0-6
+                //String rr1 = rr;
+                if (rr.length() == 1) {
+                    rr = rr.replaceFirst("^[0-6]", "");
+                } else {
+                    rr = rr.replaceFirst("^[0-6]\\s+", "");
+                }
+                //Log.d(TAG, "|" + rr1 + "|->|" + rr + "| |");
+            }
             string += "\nR-R: " + rrString;
         } else {
             string += "\nR-R: NA";
