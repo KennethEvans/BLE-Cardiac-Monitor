@@ -68,11 +68,7 @@ public class HeartRateValues implements IConstants {
             if (USE_CORSENSE_FIX) {
                 // Take out first value if 0-6
                 //String rr1 = rr;
-                if (rr.length() == 1) {
-                    rr = rr.replaceFirst("^[0-6]", "");
-                } else {
-                    rr = rr.replaceFirst("^[0-6]\\s+", "");
-                }
+                rr = rr.replaceFirst("^[0-6](\\s+|$)", "");
                 //Log.d(TAG, "|" + rr1 + "|->|" + rr + "| |");
             }
             string += "\nR-R: " + rrString;
