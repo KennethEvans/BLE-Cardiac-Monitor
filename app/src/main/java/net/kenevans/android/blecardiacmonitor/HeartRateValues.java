@@ -2,6 +2,9 @@ package net.kenevans.android.blecardiacmonitor;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class HeartRateValues implements IConstants {
     private long date;
     private int hr = INVALID_INT;
@@ -9,8 +12,10 @@ public class HeartRateValues implements IConstants {
     private int ee = INVALID_INT;
     private String rr = INVALID_STRING;
     private String info;
+    private static Pattern corsenseFixPattern = Pattern.compile("^[0-6]" +
+            "(\\s+|$)");
 
-    public HeartRateValues(BluetoothGattCharacteristic characteristic, long
+    HeartRateValues(BluetoothGattCharacteristic characteristic, long
             date) {
         this.date = date;
         if (!characteristic.getUuid().equals(UUID_HEART_RATE_MEASUREMENT)) {
@@ -58,17 +63,20 @@ public class HeartRateValues implements IConstants {
             // There may be more than 1 R-R value
             int iVal;
             String rrString = "";
+            StringBuilder sb = new StringBuilder();
             while (offset < len) {
                 iVal = characteristic.getIntValue(
                         BluetoothGattCharacteristic.FORMAT_UINT16, offset);
                 offset += 2;
-                rrString += " " + iVal;
+                sb.append(" ");
+                sb.append(iVal);
             }
-            rr = rrString.trim();
+            rr = sb.toString().trim();
             if (USE_CORSENSE_FIX) {
                 // Take out first value if 0-6
                 //String rr1 = rr;
-                rr = rr.replaceFirst("^[0-6](\\s+|$)", "");
+                Matcher matcher = corsenseFixPattern.matcher(rr);
+                rr = matcher.replaceFirst("");
                 //Log.d(TAG, "|" + rr1 + "|->|" + rr + "| |");
             }
             string += "\nR-R: " + rrString;
