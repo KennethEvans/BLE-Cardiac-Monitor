@@ -14,6 +14,13 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+            applicationVariants.all { variant ->
+                variant.outputs.all { output ->
+                    def appName = "BLE Cardiac Monitor"
+                    def formattedDate = new Date().format('yyyyMMddHHmmss')
+                    outputFileName = "${appName}-${variant.versionName}-${variant.name}-${formattedDate}.apk"
+                }
+            }
         }
     }
     productFlavors {
