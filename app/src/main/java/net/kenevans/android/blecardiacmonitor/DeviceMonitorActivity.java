@@ -23,6 +23,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -35,7 +36,7 @@ import android.widget.Toast;
  * device. The Activity communicates with {@code BCMBleService}, which in turn
  * interacts with the Bluetooth LE API.
  */
-public class DeviceMonitorActivity extends Activity implements IConstants {
+public class DeviceMonitorActivity extends AppCompatActivity implements IConstants {
     private TextView mConnectionState;
     private TextView mBat;
     private TextView mHr;

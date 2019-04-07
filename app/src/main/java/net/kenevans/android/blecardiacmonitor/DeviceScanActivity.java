@@ -2,9 +2,7 @@ package net.kenevans.android.blecardiacmonitor;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.ActionBar;
 import android.app.Activity;
-import android.app.ListActivity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -16,12 +14,15 @@ import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.ActionBar;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -33,23 +34,33 @@ import java.util.ArrayList;
  * Activity for scanning and displaying available Bluetooth LE devices.
  */
 @SuppressLint("InflateParams")
-public class DeviceScanActivity extends ListActivity implements IConstants {
+public class DeviceScanActivity extends AppCompatActivity implements IConstants {
     private LeDeviceListAdapter mLeDeviceListAdapter;
     private BluetoothAdapter mBluetoothAdapter;
     private boolean mScanning;
     private Handler mHandler;
     private boolean mCoarseLocationPermissionAsked = false;
     private boolean mAllowScan;
+    private ListView mListView;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        ActionBar actionBar = getActionBar();
+        ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.setTitle(R.string.title_activity_devices);
             actionBar.setDisplayHomeAsUpEnabled(false);
         }
+        setContentView(R.layout.list_view);
         mHandler = new Handler();
+        mListView = findViewById(R.id.mainListView);
+        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view,
+                                    int position, long id) {
+                onListItemClick(mListView, view, position, id);
+            }
+        });
 
         // Use this check to determine whether BLE is supported on the device.
         // Then you can selectively disable BLE-related features.
@@ -136,7 +147,7 @@ public class DeviceScanActivity extends ListActivity implements IConstants {
         } else {
             // Initialize the list view adapter
             mLeDeviceListAdapter = new LeDeviceListAdapter();
-            setListAdapter(mLeDeviceListAdapter);
+            mListView.setAdapter(mLeDeviceListAdapter);
             startScan();
         }
     }
@@ -171,7 +182,6 @@ public class DeviceScanActivity extends ListActivity implements IConstants {
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    @Override
     protected void onListItemClick(ListView l, View v, int position, long id) {
         final BluetoothDevice device = mLeDeviceListAdapter.getDevice(position);
         if (device == null) {
@@ -316,18 +326,18 @@ public class DeviceScanActivity extends ListActivity implements IConstants {
     private BluetoothAdapter.LeScanCallback mLeScanCallback = new
             BluetoothAdapter.LeScanCallback() {
 
-        @Override
-        public void onLeScan(final BluetoothDevice device, int rssi,
-                             byte[] scanRecord) {
-            runOnUiThread(new Runnable() {
                 @Override
-                public void run() {
-                    mLeDeviceListAdapter.addDevice(device);
-                    mLeDeviceListAdapter.notifyDataSetChanged();
+                public void onLeScan(final BluetoothDevice device, int rssi,
+                                     byte[] scanRecord) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            mLeDeviceListAdapter.addDevice(device);
+                            mLeDeviceListAdapter.notifyDataSetChanged();
+                        }
+                    });
                 }
-            });
-        }
-    };
+            };
 
     static class ViewHolder {
         TextView deviceName;

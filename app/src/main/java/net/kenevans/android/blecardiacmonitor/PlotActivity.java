@@ -1,9 +1,24 @@
 package net.kenevans.android.blecardiacmonitor;
 
-import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
+import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.graphics.Color;
+import android.graphics.Point;
+import android.graphics.Typeface;
+import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
+import android.view.Display;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.Window;
+import android.view.WindowManager;
 
 import org.afree.chart.AFreeChart;
 import org.afree.chart.ChartFactory;
@@ -26,29 +41,15 @@ import org.afree.graphics.geom.Font;
 import org.afree.graphics.geom.RectShape;
 import org.afree.ui.RectangleInsets;
 
-import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.SharedPreferences;
-import android.database.Cursor;
-import android.graphics.Color;
-import android.graphics.Point;
-import android.graphics.Typeface;
-import android.os.Bundle;
-import android.preference.PreferenceManager;
-import android.util.Log;
-import android.view.Display;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.Window;
-import android.view.WindowManager;
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 /**
  * @author evans
  */
-public class PlotActivity extends Activity implements IConstants {
+public class PlotActivity extends AppCompatActivity implements IConstants {
     private static final String TAG = "BCM Plot";
     private AFreeChartView mView;
     private AFreeChart mChart;
@@ -98,7 +99,7 @@ public class PlotActivity extends Activity implements IConstants {
     /**
      * Make an IntentFilter for the actions in which we are interested.
      *
-     * @return
+     * @return The IntentFilter.
      */
     private static IntentFilter makeGattUpdateIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
@@ -144,10 +145,6 @@ public class PlotActivity extends Activity implements IConstants {
 
         // Open the database
         mDataDir = new File(prefString);
-        if (mDataDir == null) {
-            Utils.errMsg(this, "Database directory is null");
-            return;
-        }
         if (!mDataDir.exists()) {
             Utils.errMsg(this, "Cannot find database directory: " + mDataDir);
             mDataDir = null;
@@ -269,7 +266,7 @@ public class PlotActivity extends Activity implements IConstants {
     /**
      * Displays the error from an ACTION_ERROR callback.
      *
-     * @param intent
+     * @param intent The Intent used to display the error.
      */
     private void displayError(Intent intent) {
         String msg = null;
@@ -371,7 +368,7 @@ public class PlotActivity extends Activity implements IConstants {
         long[] times = new long[nTokens];
         double[] values = new double[nTokens];
         long lastRrTime = mLastRrTime;
-        double val = Double.NaN;
+        double val;
         for (int i = 0; i < nTokens; i++) {
             try {
                 val = Double.parseDouble(tokens[i]);
@@ -448,12 +445,10 @@ public class PlotActivity extends Activity implements IConstants {
         // chart.setPadding(new RectangleInsets(10.0, 10.0, 10.0, 10.0));
 
         // Legend
-        if (doLegend) {
-            LegendTitle legend = chart.getLegend();
-            legend.setItemFont(font);
-            legend.setBackgroundPaintType(black);
-            legend.setItemPaintType(white);
-        }
+        LegendTitle legend = chart.getLegend();
+        legend.setItemFont(font);
+        legend.setBackgroundPaintType(black);
+        legend.setItemPaintType(white);
 
         // Plot
         XYPlot plot = (XYPlot) chart.getPlot();
@@ -486,14 +481,13 @@ public class PlotActivity extends Activity implements IConstants {
         // HR
         if (mPlotHr) {
             final int axisNum = 1;
-            SolidColor color = hrColor;
             NumberAxis axis = new NumberAxis(null);
             plot.setRangeAxis(axisNum, axis);
             plot.setDataset(axisNum, mHrDataset);
             plot.mapDatasetToRangeAxis(axisNum, axisNum);
             plot.setRangeAxisLocation(axisNum, AxisLocation.BOTTOM_OR_LEFT);
             XYItemRenderer itemRenderer = new StandardXYItemRenderer();
-            itemRenderer.setSeriesPaintType(0, color);
+            itemRenderer.setSeriesPaintType(0, hrColor);
             itemRenderer.setBaseStroke(strokeSize);
             itemRenderer.setSeriesStroke(0, strokeSize);
             plot.setRenderer(axisNum, itemRenderer);
@@ -503,22 +497,21 @@ public class PlotActivity extends Activity implements IConstants {
             axis.setTickUnit(new NumberTickUnit(5));
             // yAxis0.setLabelFont(font);
             // yAxis0.setLabelPaintType(color);
-            axis.setAxisLinePaintType(color);
+            axis.setAxisLinePaintType(hrColor);
             axis.setTickLabelFont(font);
-            axis.setTickLabelPaintType(color);
+            axis.setTickLabelPaintType(hrColor);
         }
 
         // RR
         if (mPlotRr) {
             final int axisNum = 2;
-            SolidColor color = rrColor;
             NumberAxis axis = new NumberAxis(null);
             plot.setRangeAxis(axisNum, axis);
             plot.setDataset(axisNum, mRrDataset);
             plot.mapDatasetToRangeAxis(axisNum, axisNum);
             plot.setRangeAxisLocation(axisNum, AxisLocation.BOTTOM_OR_RIGHT);
             XYItemRenderer itemRenderer = new StandardXYItemRenderer();
-            itemRenderer.setSeriesPaintType(0, color);
+            itemRenderer.setSeriesPaintType(0, rrColor);
             itemRenderer.setBaseStroke(strokeSize);
             itemRenderer.setSeriesStroke(0, strokeSize);
             plot.setRenderer(axisNum, itemRenderer);
@@ -528,10 +521,10 @@ public class PlotActivity extends Activity implements IConstants {
             // axis.setTickUnit(new NumberTickUnit(.1));
             // yAxis1.setLabelFont(font);
             // yAxis1.setLabelPaintType(color);
-            axis.setLabelPaintType(color);
-            axis.setAxisLinePaintType(color);
+            axis.setLabelPaintType(rrColor);
+            axis.setAxisLinePaintType(rrColor);
             axis.setTickLabelFont(font);
-            axis.setTickLabelPaintType(color);
+            axis.setTickLabelPaintType(rrColor);
         }
         return chart;
     }
@@ -539,18 +532,17 @@ public class PlotActivity extends Activity implements IConstants {
     /**
      * Updates the chart when data is received from the BCMBleService.
      *
-     * @param intent
+     * @param intent THe Intent used.
      */
     private void updateChart(Intent intent) {
         Log.d(TAG, "updateChart");
         String strValue;
-        double value = Double.NaN;
+        double value;
         long date = intent.getLongExtra(EXTRA_DATE, INVALID_DATE);
         if (date == INVALID_DATE) {
             return;
         }
         if (mPlotHr && mHrSeries != null) {
-            value = Double.NaN;
             strValue = intent.getStringExtra(EXTRA_HR);
             if (strValue != null && strValue.length() > 0) {
                 try {
@@ -570,7 +562,6 @@ public class PlotActivity extends Activity implements IConstants {
                 mLastRrUpdateTime = date;
                 mLastRrTime = date;
             }
-            value = Double.NaN;
             strValue = intent.getStringExtra(EXTRA_RR);
             if (strValue != null && strValue.length() > 0) {
                 // boolean res = addRrValues(mRrSeries, date, strValue);
@@ -626,10 +617,10 @@ public class PlotActivity extends Activity implements IConstants {
 
                 // Loop over items
                 cursor.moveToFirst();
-                long date = INVALID_DATE;
+                long date;
                 double hr;
                 String rrString;
-                while (cursor.isAfterLast() == false) {
+                while (!cursor.isAfterLast()) {
                     date = cursor.getLong(indexDate);
                     if (indexHr > -1) {
                         hr = cursor.getInt(indexHr);
@@ -658,7 +649,7 @@ public class PlotActivity extends Activity implements IConstants {
             Utils.excMsg(this, "Error creating datasets", ex);
         } finally {
             try {
-                cursor.close();
+                if (cursor != null) cursor.close();
             } catch (Exception ex) {
                 // Do nothing
             }
