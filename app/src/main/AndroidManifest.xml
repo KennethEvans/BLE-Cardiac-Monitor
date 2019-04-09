@@ -33,6 +33,7 @@
         </activity>
         <activity
             android:name="net.kenevans.android.blecardiacmonitor.PlotActivity"
+            android:theme="@style/Theme.AppCompat.NoActionBar" >
             android:label="@string/title_activity_plot"
             android:parentActivityName="net.kenevans.android.blecardiacmonitor.DeviceMonitorActivity" >
         </activity>

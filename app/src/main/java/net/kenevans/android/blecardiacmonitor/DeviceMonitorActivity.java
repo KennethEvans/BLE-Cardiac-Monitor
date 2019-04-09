@@ -1,9 +1,5 @@
 package net.kenevans.android.blecardiacmonitor;
 
-import java.io.File;
-import java.util.List;
-import java.util.UUID;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
@@ -29,6 +25,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.io.File;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * For a given BLE device, this Activity provides the user interface to connect,

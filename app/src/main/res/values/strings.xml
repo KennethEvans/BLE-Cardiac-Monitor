@@ -20,6 +20,8 @@
     <string name="label_device_address">Device address: </string>
     <string name="label_hr">Heart Rate: </string>
     <string name="label_rr">R-R: </string>
+    <string name="hr_title">HR and RR vs. Time (for 5 min)</string>
+    <string name="hr_range_title">HR, /sec RR, ms/10</string>
     <string name="label_bat">Battery Level: </string>
     <string name="label_act">Activity: </string>
     <string name="label_pa">Peak Acceleration: </string>
