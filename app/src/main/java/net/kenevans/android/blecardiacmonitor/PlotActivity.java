@@ -34,6 +34,7 @@ import java.text.Format;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 /**
  * @author evans
@@ -54,9 +55,8 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
     private long mLastRrUpdateTime = INVALID_DATE;
     private long mLastRrTime = INVALID_DATE;
 
-    private static final int NVALS = 300;  // 5 min
-    private double RR_SCALE = .1;
-    // to ms
+    private double RR_SCALE = .1;  // to 100 ms to use same axis
+
     private Context context;
     private XYSeriesFormatter hrFormatter;
     private XYSeriesFormatter rrFormatter;
@@ -184,8 +184,8 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
             Log.d(TAG, getClass().getSimpleName() + ".onResume: mPlot is null");
             returnResult(RESULT_ERROR, "mPlot is null");
         }
-        // If mSession is true it uses mPlotSessionStart, set in onCreate
-        // If mSession is false it uses mPlotStartTime, set here
+        // If mIsSession is true it uses mPlotSessionStart, set in onCreate
+        // If mIsSession is false it uses mPlotStartTime, set here
         if (!mIsSession) {
             Log.d(TAG, "onResume: Starting registerReceiver");
             registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
@@ -319,7 +319,7 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
                 setFormat(new DecimalFormat("#"));
         mPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.BOTTOM).setFormat(new Format() {
             private final SimpleDateFormat dateFormat = new SimpleDateFormat(
-                    "HH:mm");
+                    "HH:mm", Locale.US);
 
             @Override
             public StringBuffer format(Object obj,
@@ -512,10 +512,8 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
             return true;
         }
         if (strValue.equals(INVALID_STRING)) {
-            // TODO
             mLastRrUpdateTime = updateTime;
             mLastRrTime = updateTime - INITIAL_RR_START_TIME;
-//            series.addOrUpdate(new FixedMillisecond(updateTime), Double.NaN);
             return true;
         }
         String[] tokens;
@@ -538,16 +536,8 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
             times[i] = lastRrTime;
             values[i] = val / 1.024;
         }
-        // Make all times be >= mLastRrUpdateTime
-        long deltaTime;
-        long firstTime = times[0];
-        if (firstTime < mLastRrUpdateTime) {
-            deltaTime = mLastRrUpdateTime - firstTime;
-            for (int i = 0; i < nRrValues; i++) {
-                times[i] += deltaTime;
-            }
-        }
         // Make all times be <= updateTime. Overrides previous if necessary.
+        long deltaTime;
         long lastTime = times[nRrValues - 1];
         if (times[nRrValues - 1] > updateTime) {
             deltaTime = lastTime - updateTime;
@@ -555,11 +545,10 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
                 times[i] -= deltaTime;
             }
         }
-        int index = 0;
         double rr;
-        for (int i = NVALS - nRrValues; i < NVALS; i++) {
-            rr = RR_SCALE * values[index++];
-            rrSeries.addLast(updateTime, rr);
+        for (int i = 0; i < nRrValues; i++) {
+            rr = RR_SCALE * values[i];
+            rrSeries.addLast(times[i], rr);
         }
         mLastRrUpdateTime = updateTime;
         mLastRrTime = times[nRrValues - 1];
@@ -585,8 +574,8 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
         sb.append("Domain Origin=").append(date.toString()).append(LF);
         sb.append("Range Step Value=").append(mPlot.getRangeStepValue()).append(LF);
         sb.append("Domain Step Value=").append(mPlot.getDomainStepValue()).append(LF);
-        sb.append("Graph Width=" + mPlot.getGraph().getSize().getWidth().getValue()).append(LF);
-        sb.append("Graph Height=" + mPlot.getGraph().getSize().getHeight().getValue()).append(LF);
+        sb.append("Graph Width=").append(mPlot.getGraph().getSize().getWidth().getValue()).append(LF);
+        sb.append("Graph Height=").append(mPlot.getGraph().getSize().getHeight().getValue()).append(LF);
         if (hrSeries != null) {
             if (hrSeries.getxVals() != null) {
                 sb.append("hrSeries Size=").append(hrSeries.getxVals().size()).append(LF);
