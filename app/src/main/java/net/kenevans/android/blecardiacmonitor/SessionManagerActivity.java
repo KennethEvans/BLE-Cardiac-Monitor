@@ -53,6 +53,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         super.onCreate(savedInstanceState);
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
+            actionBar.setTitle(R.string.title_activity_session_manager);
             actionBar.setDisplayHomeAsUpEnabled(false);
         }
 

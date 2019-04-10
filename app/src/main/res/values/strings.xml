@@ -5,7 +5,7 @@
     <string name="title_activity_session_manager">Sessions</string>
     <string name="title_activity_devices">BLE Device Scan</string>
     <string name="title_activity_device_scan">Select BLE Device</string>
-    <string name="title_activity_plot">BLE Cardiac Monitor</string>
+    <string name="title_activity_plot">Plot</string>
     <string name="title_activity_settings">Settings</string>
     <string name="device_monitor_name">BLE Cardiac Monitor</string>
     <string name="hello_world">Hello world!</string>

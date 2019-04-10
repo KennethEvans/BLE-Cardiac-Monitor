@@ -11,6 +11,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -110,6 +111,11 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
     protected void onCreate(Bundle savedInstanceState) {
         Log.d(TAG, this.getClass().getSimpleName() + ": onCreate");
         super.onCreate(savedInstanceState);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setTitle(R.string.title_activity_plot);
+            actionBar.setDisplayHomeAsUpEnabled(false);
+        }
         setContentView(R.layout.activity_plot);
         mPlot = findViewById(R.id.plot);
 
