@@ -15,6 +15,9 @@
         \n\nACCESS_COARSE_LOCATION permission must be granted to scan for Bluetooth devices.
         \n\nYou may have to grant this manually for BLE Explorer in Settings.</string>
 
+    <string name="default_notification_channel_id">BCM_BLE_Service_Default</string>
+    <string name="default_notification_description">BCM BLE Service</string>
+
     <string name="label_data">Data: </string>
     <string name="label_device_name">Device name: </string>
     <string name="label_device_address">Device address: </string>
