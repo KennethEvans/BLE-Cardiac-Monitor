@@ -6,9 +6,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -17,6 +19,7 @@ import android.view.WindowManager;
 
 import com.androidplot.xy.BoundaryMode;
 import com.androidplot.xy.LineAndPointFormatter;
+import com.androidplot.xy.PanZoom;
 import com.androidplot.xy.SimpleXYSeries;
 import com.androidplot.xy.StepMode;
 import com.androidplot.xy.XYGraphWidget;
@@ -25,7 +28,10 @@ import com.androidplot.xy.XYSeriesFormatter;
 
 import java.io.File;
 import java.text.DecimalFormat;
-import java.util.Arrays;
+import java.text.FieldPosition;
+import java.text.Format;
+import java.text.ParsePosition;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
@@ -33,17 +39,9 @@ import java.util.Date;
  */
 public class PlotActivity extends AppCompatActivity implements IConstants,
         PlotterListener {
-    private static final String TAG = "BCM Plot";
+    private static final String TAG = "BCMPlot";
     private XYPlot mPlot;
 
-    //    private AFreeChartView mView;
-//    private AFreeChart mChart;
-//    private TimeSeriesCollection mHrDataset;
-//    private TimeSeriesCollection mRrDataset;
-//    private TimeSeriesCollection mActDataset;
-//    private TimeSeriesCollection mPaDataset;
-//    private TimeSeries mHrSeries;
-//    private TimeSeries mRrSeries;
     private boolean mPlotHr = true;
     private boolean mPlotRr = true;
     private int mPlotInterval = PLOT_MAXIMUM_AGE;
@@ -63,10 +61,6 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
     private XYSeriesFormatter rrFormatter;
     private SimpleXYSeries hrSeries;
     private SimpleXYSeries rrSeries;
-    private Double[] xHrVals = new Double[NVALS];
-    private Double[] yHrVals = new Double[NVALS];
-    private Double[] xRrVals = new Double[NVALS];
-    private Double[] yRrVals = new Double[NVALS];
 
 
     /**
@@ -86,10 +80,12 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
                 public void onReceive(Context context, Intent intent) {
                     final String action = intent.getAction();
                     if (BCMBleService.ACTION_DATA_AVAILABLE.equals(action)) {
-                        // Log.d(TAG, "onReceive: " + action);
+//                        Log.d(TAG, "mGattUpdateReceiver:onReceive: " +
+//                                action);
                         addValues(intent);
                     } else if (BCMBleService.ACTION_ERROR.equals(action)) {
-                        Log.d(TAG, "onReceive: " + action);
+//                        Log.d(TAG, "mGattUpdateReceiver:onReceive: " +
+//                                action);
                         displayError(intent);
                     }
                 }
@@ -151,60 +147,15 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
         mDbAdapter = new BCMDbAdapter(this, mDataDir);
         mDbAdapter.open();
 
-        // Initialize plots
-        Date now = new Date();
-        double endTime = now.getTime();
-        double startTime = endTime - NVALS * 1000;
-        double delta = (endTime - startTime) / (NVALS - 1);
-
-        // Specify initial values to keep it from auto sizing
-        for (int i = 0; i < NVALS; i++) {
-            xHrVals[i] = new Double(startTime + i * delta);
-            yHrVals[i] = new Double(60);
-            xRrVals[i] = new Double(startTime + i * delta);
-            yRrVals[i] = new Double(100);
-        }
-
-        hrFormatter = new LineAndPointFormatter(Color.RED,
-                null, null, null);
-        hrFormatter.setLegendIconEnabled(false);
-        hrSeries = new SimpleXYSeries(Arrays.asList(xHrVals),
-                Arrays.asList(yHrVals),
-                "HR");
-
-        rrFormatter = new LineAndPointFormatter(Color.BLUE,
-                null, null, null);
-        rrFormatter.setLegendIconEnabled(false);
-        rrSeries = new SimpleXYSeries(Arrays.asList(xRrVals),
-                Arrays.asList(yRrVals),
-                "HR");
-
-        mPlot.addSeries(hrSeries, hrFormatter);
-        mPlot.addSeries(rrSeries, rrFormatter);
-
-        mPlot.setRangeBoundaries(50, 100,
-                BoundaryMode.AUTO);
-        mPlot.setDomainBoundaries(0, 360000,
-                BoundaryMode.AUTO);
-        // Left labels will increment by 10
-        mPlot.setRangeStep(StepMode.INCREMENT_BY_VAL, 10);
-        mPlot.setDomainStep(StepMode.INCREMENT_BY_VAL, 60000);
-        // Make left labels be an integer (no decimal places)
-        mPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.LEFT).
-                setFormat(new DecimalFormat("#"));
-        // These don't seem to have an effect
-        mPlot.setLinesPerRangeLabel(2);
-
-
         // Set result CANCELED in case the user backs out
         setResult(Activity.RESULT_CANCELED);
     }
 
     @Override
     protected void onResume() {
-//        Log.d(TAG, this.getClass().getSimpleName() + ": onResume: " + "mView="
-//                + mView + " mHrDataset=" + mHrDataset + " mHrSeries="
-//                + mHrSeries);
+        Log.d(TAG, this.getClass().getSimpleName() + ": onResume: " + "mPlot="
+                + mPlot + " hrSeries=" + hrSeries + " rrSeries="
+                + rrSeries);
         super.onResume();
         // Get the settings
         SharedPreferences prefs = PreferenceManager
@@ -220,6 +171,12 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
             } catch (Exception ex) {
                 mPlotInterval = PLOT_MAXIMUM_AGE;
             }
+        }
+        if (mPlot != null) {
+            createPlot();
+        } else {
+            Log.d(TAG, getClass().getSimpleName() + ".onResume: mPlot is null");
+            returnResult(RESULT_ERROR, "mPlot is null");
         }
         // If mSession is true it uses mPlotSessionStart, set in onCreate
         // If mSession is false it uses mPlotStartTime, set here
@@ -272,11 +229,20 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         switch (id) {
+            case R.id.menu_zoom_reset:
+                if (mPlot != null) {
+                    mPlot.setRangeBoundaries(50, 100,
+                            BoundaryMode.AUTO);
+                    mPlot.setDomainBoundaries(0, 24 * 3600 * 1000,
+                            BoundaryMode.AUTO);
+                    update();
+                }
+                return true;
             case R.id.menu_refresh:
                 refresh();
                 return true;
             case R.id.get_view_info:
-                Utils.infoMsg(this, getViewInfo());
+                Utils.infoMsg(this, getPlotInfo());
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -311,7 +277,8 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
             }
             Utils.errMsg(this, msg);
         } catch (Exception ex) {
-            Log.d(TAG, "Error displaying error", ex);
+            Log.d(TAG, this.getClass().getSimpleName() + ": displayError: " +
+                    "Error displaying error", ex);
             Utils.excMsg(this, msg, ex);
         }
     }
@@ -320,49 +287,170 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
      * Refreshes the mPlot by getting new data.
      */
     private void refresh() {
-//        // The logic for whether it is a session or not is in these methods
-//        createDatasets();
-//        ((XYPlot) mChart.getPlot()).setDataset(1, mHrDataset);
-//        ((XYPlot) mChart.getPlot()).setDataset(2, mRrDataset);
-//        ((XYPlot) mChart.getPlot()).setDataset(3, mActDataset);
-//        ((XYPlot) mChart.getPlot()).setDataset(4, mPaDataset);
+        // The logic for whether it is a session or not is in this method
+        createSeries();
     }
 
     private void createPlot() {
-        Date now = new Date();
-        double endTime = now.getTime();
-        double startTime = endTime - NVALS * 1000;
-        double delta = (endTime - startTime) / (NVALS - 1);
-
-        // Specify initial values to keep it from auto sizing
-        for (int i = 0; i < NVALS; i++) {
-            xHrVals[i] = new Double(startTime + i * delta);
-            yHrVals[i] = new Double(60);
-            xRrVals[i] = new Double(startTime + i * delta);
-            yRrVals[i] = new Double(100);
-        }
-
+        Log.d(TAG, this.getClass().getSimpleName() + ": createPlot");
         hrFormatter = new LineAndPointFormatter(Color.RED,
                 null, null, null);
         hrFormatter.setLegendIconEnabled(false);
-        hrSeries = new SimpleXYSeries(Arrays.asList(xHrVals),
-                Arrays.asList(yHrVals),
-                "HR");
-
         rrFormatter = new LineAndPointFormatter(Color.BLUE,
                 null, null, null);
         rrFormatter.setLegendIconEnabled(false);
-        rrSeries = new SimpleXYSeries(Arrays.asList(xRrVals),
-                Arrays.asList(yRrVals),
-                "HR");
+
+        mPlot.setRangeBoundaries(50, 100,
+                BoundaryMode.AUTO);
+        mPlot.setDomainBoundaries(0, 360000,
+                BoundaryMode.AUTO);
+        // Range labels will increment by 10
+        mPlot.setRangeStep(StepMode.INCREMENT_BY_VAL, 10);
+        // Domain labels will incremented by 1 min
+//        mPlot.setDomainStep(StepMode.INCREMENT_BY_VAL, 60000);
+        mPlot.setDomainStep(StepMode.SUBDIVIDE, 5);
+        // Make left labels be an integer (no decimal places)
+        mPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.LEFT).
+                setFormat(new DecimalFormat("#"));
+        mPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.BOTTOM).setFormat(new Format() {
+            private final SimpleDateFormat dateFormat = new SimpleDateFormat(
+                    "HH:mm");
+
+            @Override
+            public StringBuffer format(Object obj,
+                                       @NonNull StringBuffer toAppendTo,
+                                       @NonNull FieldPosition pos) {
+                int yearIndex = (int) Math.round(((Number) obj).doubleValue());
+                return dateFormat.format(yearIndex, toAppendTo, pos);
+            }
+
+            @Override
+            public Object parseObject(String source,
+                                      @NonNull ParsePosition pos) {
+                return null;
+            }
+        });
+
+        // These don't seem to have an effect
+        mPlot.setLinesPerRangeLabel(2);
+
+        // Pan and Zoom
+        PanZoom.attach(mPlot, PanZoom.Pan.BOTH, PanZoom.Zoom.STRETCH_BOTH);
     }
 
+    /**
+     * Creates the data sets and series.
+     */
+    private void createSeries() {
+        Log.d(TAG, "Creating series");
+        if (!mPlotHr && !mPlotRr) {
+            Utils.errMsg(this, "Neither HR nor RR is selected to be plotted");
+        }
+        if (mPlotHr) {
+            hrSeries = new SimpleXYSeries("HR");
+//            if (!mIsSession) {
+//                mHrSeries.setMaximumItemAge(mPlotInterval);
+//            }
+        } else {
+            hrSeries = null;
+        }
+        if (mPlotRr) {
+            rrSeries = new SimpleXYSeries("RR");
+//            if (!mIsSession) {
+//                mRrSeries.setMaximumItemAge(mPlotInterval);
+//            }
+        } else {
+            rrSeries = null;
+        }
+        mLastRrTime = INVALID_DATE;
+        mLastRrUpdateTime = INVALID_DATE;
+        Cursor cursor = null;
+        int nHrItems = 0, nRrItems = 0;
+        int nErrors = 0;
+        boolean res;
+        try {
+            if (mDbAdapter != null) {
+                if (mIsSession) {
+                    cursor = mDbAdapter
+                            .fetchAllHrRrDateDataForStartDate
+                                    (mPlotSessionStart);
+                } else {
+                    cursor = mDbAdapter
+                            .fetchAllHrRrDateDataStartingAtDate
+                                    (mPlotStartTime);
+                }
+                int indexDate = cursor.getColumnIndex(COL_DATE);
+                int indexHr = mPlotHr ? cursor.getColumnIndex(COL_HR) : -1;
+                int indexRr = mPlotRr ? cursor.getColumnIndex(COL_RR) : -1;
+
+                // Loop over items
+                cursor.moveToFirst();
+                long date;
+                double hr;
+                String rrString;
+                while (!cursor.isAfterLast()) {
+                    date = cursor.getLong(indexDate);
+                    if (indexHr > -1) {
+                        hr = cursor.getInt(indexHr);
+                        if (hr == INVALID_INT) {
+                            hr = Double.NaN;
+                        }
+                        hrSeries.addLast(date, hr);
+                        nHrItems++;
+                    }
+                    if (indexRr > -1) {
+                        rrString = cursor.getString(indexRr);
+                        if (nRrItems == 0) {
+                            mLastRrUpdateTime = date;
+                            mLastRrTime = date - INITIAL_RR_START_TIME;
+                        }
+                        res = addRrValues(date, rrString);
+                        nRrItems++;
+                        if (!res) {
+                            nErrors++;
+                        }
+                    }
+                    cursor.moveToNext();
+                }
+            }
+        } catch (Exception ex) {
+            Utils.excMsg(this, "Error creating datasets", ex);
+        } finally {
+            try {
+                if (cursor != null) cursor.close();
+            } catch (Exception ex) {
+                // Do nothing
+            }
+        }
+        if (nErrors > 0) {
+            Utils.errMsg(this, nErrors + " creating RR series");
+        }
+        if (mPlotHr) {
+            Log.d(TAG, "HR series created with " + nHrItems + " items");
+            mPlot.addSeries(hrSeries, hrFormatter);
+        }
+        if (mPlotRr) {
+            Log.d(TAG, "RR series created with " + nRrItems
+                    + " items with nErrors=" + nErrors);
+            mPlot.addSeries(rrSeries, rrFormatter);
+        }
+    }
+
+    /**
+     * Add new values to the plot when received from the Gatt broadcast
+     * receiver.  This only happens when not in a session.
+     *
+     * @param intent Intent from the mGattUpdateReceiver.
+     */
     public void addValues(Intent intent) {
-        Log.d(TAG, "updateChart");
+//        Log.d(TAG, this.getClass().getSimpleName() + ": addValues: mPlotHr="
+//                + mPlotHr + " mPlotRr=" + mPlotRr);
         String strValue;
         double value;
         long date = intent.getLongExtra(EXTRA_DATE, INVALID_DATE);
         if (date == INVALID_DATE) {
+            Log.d(TAG, this.getClass().getSimpleName() + ": addValues: " +
+                    "INVALID_DATE");
             return;
         }
         //
@@ -377,16 +465,7 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
                 if (value == INVALID_INT) {
                     value = Double.NaN;
                 }
-                // Reset the series
-                for (int i = 0; i < NVALS - 1; i++) {
-                    xHrVals[i] = xHrVals[i + 1];
-                    yHrVals[i] = yHrVals[i + 1];
-                    hrSeries.setXY(xHrVals[i], yHrVals[i], i);
-                }
-                xHrVals[NVALS - 1] = new Double(date);
-                yHrVals[NVALS - 1] = new Double(value);
-                hrSeries.setXY(xHrVals[NVALS - 1], yHrVals[NVALS - 1],
-                        NVALS - 1);
+                hrSeries.addLast(date, value);
             }
         }
         if (mPlotRr) {
@@ -467,24 +546,11 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
                 times[i] -= deltaTime;
             }
         }
-        // Reset the series
-        for (int i = 0; i < NVALS - nRrValues; i++) {
-            xRrVals[i] = xRrVals[i + 1];
-            yRrVals[i] = yRrVals[i + 1];
-            rrSeries.setXY(xRrVals[i], yRrVals[i], i);
-        }
-        double totalRR = 0;
-//        for (int i = 0; i < nRrValues; i++) {
-//            totalRR += RR_SCALE * values[i];
-//        }
         int index = 0;
         double rr;
         for (int i = NVALS - nRrValues; i < NVALS; i++) {
             rr = RR_SCALE * values[index++];
-            xRrVals[i] = new Double(updateTime - totalRR);
-            yRrVals[i] = new Double(rr);
-//            totalRR -= rr;
-            rrSeries.setXY(xRrVals[i], yRrVals[i], i);
+            rrSeries.addLast(updateTime, rr);
         }
         mLastRrUpdateTime = updateTime;
         mLastRrTime = times[nRrValues - 1];
@@ -494,309 +560,41 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
     /**
      * Gets info about the view.
      */
-    private String getViewInfo() {
-//        String info = "";
-//        if (mView == null) {
-//            info += "View is null";
-//            return info;
-//        }
-//        Dimension size = mView.getSize();
-//        RectangleInsets insets = mView.getInsets();
-//        RectShape available = new RectShape(insets.getLeft(), insets.getTop(),
-//                size.getWidth() - insets.getLeft() - insets.getRight(),
-//                size.getHeight() - insets.getTop() - insets.getBottom());
-//
-//        info += "Size=(" + size.getWidth() + "," + size.getHeight() + ")\n";
-//        info += "Available=(" + available.getWidth() + ","
-//                + available.getHeight() + ") @ (" + available.getCenterX()
-//                + "," + available.getCenterY() + ")\n";
-//        int minimumDrawWidth = mView.getMinimumDrawWidth();
-//        int maximumDrawWidth = mView.getMaximumDrawWidth();
-//        int minimumDrawHeight = mView.getMinimumDrawHeight();
-//        int maximumDrawHeight = mView.getMaximumDrawHeight();
-//        info += "minimumDrawWidth=" + minimumDrawWidth + " maximumDrawWidth="
-//                + maximumDrawWidth + "\n";
-//        info += "minimumDrawHeight=" + minimumDrawHeight
-//                + " maximumDrawHeight=" + maximumDrawHeight + "\n";
-//        double chartScaleX = mView.getChartScaleX();
-//        double chartScaleY = mView.getChartScaleY();
-//        info += "chartScaleX=" + chartScaleX + " chartScaleY=" + chartScaleY
-//                + "\n";
-//        Display display = getWindowManager().getDefaultDisplay();
-//        Point displaySize = new Point();
-//        display.getSize(displaySize);
-//        info += "displayWidth=" + displaySize.x + " displayHeight="
-//                + displaySize.y + "\n";
-//
-//        return info;
-        return "Not implemented yet";
+    private String getPlotInfo() {
+        final String LF = "\n";
+        StringBuilder sb = new StringBuilder();
+        if (mPlot == null) {
+            sb.append("View is null");
+            return sb.toString();
+        }
+        sb.append("Title=" + mPlot.getTitle().getText() + LF);
+        sb.append("Range Title=" + mPlot.getRangeTitle().getText() + LF);
+        sb.append("Domain Title=" + mPlot.getDomainTitle().getText() + LF);
+        sb.append("Range Origin=" + mPlot.getRangeOrigin() + LF);
+        long timeVal = mPlot.getDomainOrigin().longValue();
+        Date date = new Date(timeVal);
+        sb.append("Domain Origin=" + date.toString() + LF);
+        sb.append("Range Step Value=" + mPlot.getRangeStepValue() + LF);
+        sb.append("Domain Step Value=" + mPlot.getDomainStepValue() + LF);
+        sb.append("Graph Width=" + mPlot.getGraph().getSize().getWidth().getValue() + LF);
+        sb.append("Graph Height=" + mPlot.getGraph().getSize().getHeight().getValue() + LF);
+        if (hrSeries != null) {
+            if (hrSeries.getxVals() != null) {
+                sb.append("hrSeries Size=" + hrSeries.getxVals().size() + LF);
+            }
+        } else {
+            sb.append("hrSeries=Null" + LF);
+        }
+        if (rrSeries != null) {
+            if (rrSeries.getxVals() != null) {
+                sb.append("rrSeries Size=" + rrSeries.getxVals().size() + LF);
+            }
+        } else {
+            sb.append("rrSeries=Null" + LF);
+        }
+        return sb.toString();
     }
 
-    /**
-     * Creates a chart.
-     * <p/>
-     * F	 * @return The chart.
-     */
-//    private AFreeChart createChart() {
-//        Log.d(TAG, "createChart");
-//        final boolean doLegend = true;
-//        AFreeChart chart = ChartFactory.createTimeSeriesChart(null, // title
-//                "Time", // x-axis label
-//                null, // y-axis label
-//                null, // data
-//                doLegend, // create legend?
-//                true, // generate tooltips?
-//                false // generate URLs?
-//        );
-//
-//        SolidColor white = new SolidColor(Color.WHITE);
-//        SolidColor black = new SolidColor(Color.BLACK);
-//        SolidColor gray = new SolidColor(Color.GRAY);
-//        SolidColor ltgray = new SolidColor(Color.LTGRAY);
-//        SolidColor hrColor = new SolidColor(Color.argb(255, 255, 50, 50));
-//        SolidColor rrColor = new SolidColor(Color.argb(255, 0, 153, 255));
-//
-//        Font font = new Font("SansSerif", Typeface.NORMAL, 30);
-//        Font titleFont = new Font("SansSerif", Typeface.BOLD, 36);
-//
-//        float strokeSize = 5f;
-//
-//        // Chart
-//        chart.setTitle("BLE Cardiac Monitor");
-//        TextTitle title = chart.getTitle();
-//        title.setFont(titleFont);
-//        title.setPaintType(white);
-//        chart.setBackgroundPaintType(black);
-//        // chart.setBorderPaintType(white);
-//        chart.setBorderVisible(false);
-//        // chart.setPadding(new RectangleInsets(10.0, 10.0, 10.0, 10.0));
-//
-//        // Legend
-//        LegendTitle legend = chart.getLegend();
-//        legend.setItemFont(font);
-//        legend.setBackgroundPaintType(black);
-//        legend.setItemPaintType(white);
-//
-//        // Plot
-//        XYPlot mPlot = (XYPlot) chart.getPlot();
-//        mPlot.setBackgroundPaintType(black);
-//        mPlot.setDomainGridlinePaintType(gray);
-//        mPlot.setRangeGridlinePaintType(gray);
-//        mPlot.setOutlineVisible(true);
-//        mPlot.setAxisOffset(new RectangleInsets(5.0, 5.0, 5.0, 5.0));
-//        // TODO Find out what these mean
-//        // mPlot.setDomainCrosshairVisible(true);
-//        // mPlot.setRangeCrosshairVisible(true);
-//        XYItemRenderer renderer = mPlot.getRenderer();
-//        if (renderer instanceof XYLineAndShapeRenderer) {
-//            XYLineAndShapeRenderer lineShapeRenderer =
-//                    (XYLineAndShapeRenderer) renderer;
-//            lineShapeRenderer.setBaseShapesVisible(true);
-//            lineShapeRenderer.setBaseShapesFilled(true);
-//            lineShapeRenderer.setDrawSeriesLineAsPath(true);
-//        }
-//
-//        // X axis
-//        DateAxis xAxis = (DateAxis) mPlot.getDomainAxis();
-//        xAxis.setDateFormatOverride(new SimpleDateFormat("hh:mm", Locale.US));
-//        xAxis.setLabelFont(font);
-//        xAxis.setLabelPaintType(white);
-//        xAxis.setAxisLinePaintType(white);
-//        xAxis.setTickLabelFont(font);
-//        xAxis.setTickLabelPaintType(ltgray);
-//
-//        // HR
-//        if (mPlotHr) {
-//            final int axisNum = 1;
-//            NumberAxis axis = new NumberAxis(null);
-//            mPlot.setRangeAxis(axisNum, axis);
-//            mPlot.setDataset(axisNum, mHrDataset);
-//            mPlot.mapDatasetToRangeAxis(axisNum, axisNum);
-//            mPlot.setRangeAxisLocation(axisNum, AxisLocation.BOTTOM_OR_LEFT);
-//            XYItemRenderer itemRenderer = new StandardXYItemRenderer();
-//            itemRenderer.setSeriesPaintType(0, hrColor);
-//            itemRenderer.setBaseStroke(strokeSize);
-//            itemRenderer.setSeriesStroke(0, strokeSize);
-//            mPlot.setRenderer(axisNum, itemRenderer);
-//
-//            axis.setAutoRangeIncludesZero(true);
-//            axis.setAutoRangeMinimumSize(10);
-//            axis.setTickUnit(new NumberTickUnit(5));
-//            // yAxis0.setLabelFont(font);
-//            // yAxis0.setLabelPaintType(color);
-//            axis.setAxisLinePaintType(hrColor);
-//            axis.setTickLabelFont(font);
-//            axis.setTickLabelPaintType(hrColor);
-//        }
-//
-//        // RR
-//        if (mPlotRr) {
-//            final int axisNum = 2;
-//            NumberAxis axis = new NumberAxis(null);
-//            mPlot.setRangeAxis(axisNum, axis);
-//            mPlot.setDataset(axisNum, mRrDataset);
-//            mPlot.mapDatasetToRangeAxis(axisNum, axisNum);
-//            mPlot.setRangeAxisLocation(axisNum, AxisLocation.BOTTOM_OR_RIGHT);
-//            XYItemRenderer itemRenderer = new StandardXYItemRenderer();
-//            itemRenderer.setSeriesPaintType(0, rrColor);
-//            itemRenderer.setBaseStroke(strokeSize);
-//            itemRenderer.setSeriesStroke(0, strokeSize);
-//            mPlot.setRenderer(axisNum, itemRenderer);
-//
-//            axis.setAutoRangeIncludesZero(true);
-//            axis.setAutoRangeMinimumSize(.25);
-//            // axis.setTickUnit(new NumberTickUnit(.1));
-//            // yAxis1.setLabelFont(font);
-//            // yAxis1.setLabelPaintType(color);
-//            axis.setLabelPaintType(rrColor);
-//            axis.setAxisLinePaintType(rrColor);
-//            axis.setTickLabelFont(font);
-//            axis.setTickLabelPaintType(rrColor);
-//        }
-//        return chart;
-//    }
-
-    /**
-     * Updates the chart when data is received from the BCMBleService.
-     *
-     * @param intent THe Intent used.
-     */
-//    private void updateChart(Intent intent) {
-//        Log.d(TAG, "updateChart");
-//        String strValue;
-//        double value;
-//        long date = intent.getLongExtra(EXTRA_DATE, INVALID_DATE);
-//        if (date == INVALID_DATE) {
-//            return;
-//        }
-//        if (mPlotHr && mHrSeries != null) {
-//            strValue = intent.getStringExtra(EXTRA_HR);
-//            if (strValue != null && strValue.length() > 0) {
-//                try {
-//                    value = Double.parseDouble(strValue);
-//                } catch (NumberFormatException ex) {
-//                    value = Double.NaN;
-//                }
-//                if (value == INVALID_INT) {
-//                    value = Double.NaN;
-//                }
-//                mHrSeries.addOrUpdate(new FixedMillisecond(date), value);
-//            }
-//        }
-//        if (mPlotRr && mRrSeries != null) {
-//
-//            if (mLastRrUpdateTime == INVALID_DATE) {
-//                mLastRrUpdateTime = date;
-//                mLastRrTime = date;
-//            }
-//            strValue = intent.getStringExtra(EXTRA_RR);
-//            if (strValue != null && strValue.length() > 0) {
-//                // boolean res = addRrValues(mRrSeries, date, strValue);
-//                // Don't check for errors here to avoid error storms
-//                addRrValues(mRrSeries, date, strValue);
-//            }
-//        }
-//    }
-
-    /**
-     * Creates the data sets and series.
-     */
-//    private void createDatasets() {
-//        Log.d(TAG, "Creating datasets");
-//        if (!mPlotHr && !mPlotRr) {
-//            Utils.errMsg(this, "Neither HR nor RR is selected to be plotted");
-//        }
-//        if (mPlotHr) {
-//            mHrSeries = new TimeSeries("HR");
-//            if (!mIsSession) {
-//                mHrSeries.setMaximumItemAge(mPlotInterval);
-//            }
-//        } else {
-//            mHrSeries = null;
-//        }
-//        if (mPlotRr) {
-//            mRrSeries = new TimeSeries("RR");
-//            if (!mIsSession) {
-//                mRrSeries.setMaximumItemAge(mPlotInterval);
-//            }
-//        } else {
-//            mRrSeries = null;
-//        }
-//        mLastRrTime = INVALID_DATE;
-//        mLastRrUpdateTime = INVALID_DATE;
-//        Cursor cursor = null;
-//        int nHrItems = 0, nRrItems = 0;
-//        int nErrors = 0;
-//        boolean res;
-//        try {
-//            if (mDbAdapter != null) {
-//                if (mIsSession) {
-//                    cursor = mDbAdapter
-//                            .fetchAllHrRrDateDataForStartDate
-//                                    (mPlotSessionStart);
-//                } else {
-//                    cursor = mDbAdapter
-//                            .fetchAllHrRrDateDataStartingAtDate
-// (mPlotStartTime);
-//                }
-//                int indexDate = cursor.getColumnIndex(COL_DATE);
-//                int indexHr = mPlotHr ? cursor.getColumnIndex(COL_HR) : -1;
-//                int indexRr = mPlotRr ? cursor.getColumnIndex(COL_RR) : -1;
-//
-//                // Loop over items
-//                cursor.moveToFirst();
-//                long date;
-//                double hr;
-//                String rrString;
-//                while (!cursor.isAfterLast()) {
-//                    date = cursor.getLong(indexDate);
-//                    if (indexHr > -1) {
-//                        hr = cursor.getInt(indexHr);
-//                        if (hr == INVALID_INT) {
-//                            hr = Double.NaN;
-//                        }
-//                        mHrSeries.addOrUpdate(new FixedMillisecond(date), hr);
-//                        nHrItems++;
-//                    }
-//                    if (indexRr > -1) {
-//                        rrString = cursor.getString(indexRr);
-//                        if (nRrItems == 0) {
-//                            mLastRrUpdateTime = date;
-//                            mLastRrTime = date - INITIAL_RR_START_TIME;
-//                        }
-//                        res = addRrValues(mRrSeries, date, rrString);
-//                        nRrItems++;
-//                        if (!res) {
-//                            nErrors++;
-//                        }
-//                    }
-//                    cursor.moveToNext();
-//                }
-//            }
-//        } catch (Exception ex) {
-//            Utils.excMsg(this, "Error creating datasets", ex);
-//        } finally {
-//            try {
-//                if (cursor != null) cursor.close();
-//            } catch (Exception ex) {
-//                // Do nothing
-//            }
-//        }
-//        if (nErrors > 0) {
-//            Utils.errMsg(this, nErrors + " creating RR dataset");
-//        }
-//        if (mPlotHr) {
-//            Log.d(TAG, "HR dataset created with " + nHrItems + " items");
-//            mHrDataset = new TimeSeriesCollection();
-//            mHrDataset.addSeries(mHrSeries);
-//        }
-//        if (mPlotRr) {
-//            Log.d(TAG, "RR dataset created with " + nRrItems
-//                    + " items nErrors=" + nErrors);
-//            mRrDataset = new TimeSeriesCollection();
-//            mRrDataset.addSeries(mRrSeries);
-//        }
-//    }
     public void update() {
         runOnUiThread(new Runnable() {
             @Override
@@ -805,5 +603,4 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
             }
         });
     }
-
 }

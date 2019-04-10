@@ -32,7 +32,7 @@ public interface IConstants {
     /**
      * Tag to associate with log messages.
      */
-    String TAG = "BCM Monitor";
+    String TAG = "BCMMonitor";
     /**
      * Name of the package for this application.
      */
