@@ -296,7 +296,7 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
         hrFormatter = new LineAndPointFormatter(Color.RED,
                 null, null, null);
         hrFormatter.setLegendIconEnabled(false);
-        rrFormatter = new LineAndPointFormatter(Color.BLUE,
+        rrFormatter = new LineAndPointFormatter(Color.rgb(0, 153, 255),
                 null, null, null);
         rrFormatter.setLegendIconEnabled(false);
 
@@ -306,8 +306,7 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
                 BoundaryMode.AUTO);
         // Range labels will increment by 10
         mPlot.setRangeStep(StepMode.INCREMENT_BY_VAL, 10);
-        // Domain labels will incremented by 1 min
-//        mPlot.setDomainStep(StepMode.INCREMENT_BY_VAL, 60000);
+//        mPlot.setDomainStep(StepMode.INCREMENT_BY_VAL, 60000); // 1 min
         mPlot.setDomainStep(StepMode.SUBDIVIDE, 5);
         // Make left labels be an integer (no decimal places)
         mPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.LEFT).
@@ -331,8 +330,12 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
             }
         });
 
-        // These don't seem to have an effect
-        mPlot.setLinesPerRangeLabel(2);
+//        // This adds sub-grid lines in the default color 180,180,180 (#646464)
+//        mPlot.setLinesPerRangeLabel(2);
+//        // No resource to set this, and this makes them disappear
+//        mPlot.getGraph().setRangeSubGridLinePaint(new Paint(Color.rgb(90, 90,
+//                90)));
+
 
         // Pan and Zoom
         PanZoom.attach(mPlot, PanZoom.Pan.BOTH, PanZoom.Zoom.STRETCH_BOTH);
@@ -567,30 +570,30 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
             sb.append("View is null");
             return sb.toString();
         }
-        sb.append("Title=" + mPlot.getTitle().getText() + LF);
-        sb.append("Range Title=" + mPlot.getRangeTitle().getText() + LF);
-        sb.append("Domain Title=" + mPlot.getDomainTitle().getText() + LF);
-        sb.append("Range Origin=" + mPlot.getRangeOrigin() + LF);
+        sb.append("Title=").append(mPlot.getTitle().getText()).append(LF);
+        sb.append("Range Title=").append(mPlot.getRangeTitle().getText()).append(LF);
+        sb.append("Domain Title=").append(mPlot.getDomainTitle().getText()).append(LF);
+        sb.append("Range Origin=").append(mPlot.getRangeOrigin()).append(LF);
         long timeVal = mPlot.getDomainOrigin().longValue();
         Date date = new Date(timeVal);
-        sb.append("Domain Origin=" + date.toString() + LF);
-        sb.append("Range Step Value=" + mPlot.getRangeStepValue() + LF);
-        sb.append("Domain Step Value=" + mPlot.getDomainStepValue() + LF);
-        sb.append("Graph Width=" + mPlot.getGraph().getSize().getWidth().getValue() + LF);
-        sb.append("Graph Height=" + mPlot.getGraph().getSize().getHeight().getValue() + LF);
+        sb.append("Domain Origin=").append(date.toString()).append(LF);
+        sb.append("Range Step Value=").append(mPlot.getRangeStepValue()).append(LF);
+        sb.append("Domain Step Value=").append(mPlot.getDomainStepValue()).append(LF);
+        sb.append("Graph Width=" + mPlot.getGraph().getSize().getWidth().getValue()).append(LF);
+        sb.append("Graph Height=" + mPlot.getGraph().getSize().getHeight().getValue()).append(LF);
         if (hrSeries != null) {
             if (hrSeries.getxVals() != null) {
-                sb.append("hrSeries Size=" + hrSeries.getxVals().size() + LF);
+                sb.append("hrSeries Size=").append(hrSeries.getxVals().size()).append(LF);
             }
         } else {
-            sb.append("hrSeries=Null" + LF);
+            sb.append("hrSeries=Null").append(LF);
         }
         if (rrSeries != null) {
             if (rrSeries.getxVals() != null) {
-                sb.append("rrSeries Size=" + rrSeries.getxVals().size() + LF);
+                sb.append("rrSeries Size=").append(rrSeries.getxVals().size()).append(LF);
             }
         } else {
-            sb.append("rrSeries=Null" + LF);
+            sb.append("rrSeries=Null").append(LF);
         }
         return sb.toString();
     }
