@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="app_name">BLE Cardiac Monitor</string>
     <string name="title_activity_session_manager">Sessions</string>
     <string name="title_activity_devices">BLE Device Scan</string>
@@ -14,10 +13,6 @@
     <string name="permission_coarse_location">Scanning disabled
         \n\nACCESS_COARSE_LOCATION permission must be granted to scan for Bluetooth devices.
         \n\nYou may have to grant this manually for BLE Explorer in Settings.</string>
-
-    <string name="default_notification_channel_id">BCM_BLE_Service_Default</string>
-    <string name="default_notification_description">BCM BLE Service</string>
-
     <string name="label_data">Data: </string>
     <string name="label_device_name">Device name: </string>
     <string name="label_device_address">Device address: </string>
@@ -59,6 +54,8 @@
     <string name="service_notification_text">"BCM BLE Service is running"</string>
     <string name="exception_msg_format">Exception: %s</string>
     <string name="not_available">NA</string>
+    <string name="default_notification_channel_id">BCM_BLE_Service_Default</string>
+    <string name="default_notification_description">BCM BLE Service</string>
 
     <!-- Menu items -->
     <string name="menu_connect">Connect</string>

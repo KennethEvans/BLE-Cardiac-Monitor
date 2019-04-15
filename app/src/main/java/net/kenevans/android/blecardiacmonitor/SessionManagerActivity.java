@@ -840,9 +840,6 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
 
         @Override
         protected void onPostExecute(Boolean result) {
-//            if (mExceptionMsg != null) {
-//
-//            }
             Log.d(TAG, this.getClass().getSimpleName()
                     + ": onPostExecute: result=" + result);
             if (dialog != null) {

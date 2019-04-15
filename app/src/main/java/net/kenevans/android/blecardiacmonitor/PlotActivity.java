@@ -10,9 +10,6 @@ import android.database.Cursor;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -35,6 +32,10 @@ import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
 
 /**
  * @author evans
@@ -536,8 +537,16 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
             times[i] = lastRrTime;
             values[i] = val / 1.024;
         }
-        // Make all times be <= updateTime. Overrides previous if necessary.
+        // Make first rr time be >= mLastRrUpdateTime
         long deltaTime;
+        long firstTime = times[0];
+        if (firstTime < mLastRrUpdateTime) {
+            deltaTime = mLastRrUpdateTime - firstTime;
+            for (int i = 0; i < nRrValues; i++) {
+                times[i] += deltaTime;
+            }
+        }
+        // Make all times be <= updateTime. Overrides previous if necessary.
         long lastTime = times[nRrValues - 1];
         if (times[nRrValues - 1] > updateTime) {
             deltaTime = lastTime - updateTime;
