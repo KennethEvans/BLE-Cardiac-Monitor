@@ -2,9 +2,6 @@ package net.kenevans.android.blecardiacmonitor;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 public class HeartRateValues implements IConstants {
     private long date;
     private int hr = INVALID_INT;
@@ -12,8 +9,6 @@ public class HeartRateValues implements IConstants {
     private int ee = INVALID_INT;
     private String rr = INVALID_STRING;
     private String info;
-    private static Pattern corsenseFixPattern = Pattern.compile("^[0-6]" +
-            "(\\s+|$)");
 
     HeartRateValues(BluetoothGattCharacteristic characteristic, long
             date) {
@@ -22,7 +17,8 @@ public class HeartRateValues implements IConstants {
             return;
         }
         String string = "";
-        int flag = characteristic.getProperties();
+        int flag =
+                characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
         int format;
         int offset = 1;
         if ((flag & 0x01) != 0) {
@@ -50,9 +46,9 @@ public class HeartRateValues implements IConstants {
         }
         // Energy Expended
         if ((flag & 0x08) != 0) {
-            offset += 2;
             ee = characteristic.getIntValue(
                     BluetoothGattCharacteristic.FORMAT_UINT16, offset);
+            offset += 2;
             string += "\nEnergy Expended: " + ee;
         } else {
             string += "\nEnergy Expended: NA";
@@ -72,13 +68,6 @@ public class HeartRateValues implements IConstants {
                 sb.append(iVal);
             }
             rr = sb.toString().trim();
-            if (USE_CORSENSE_FIX) {
-                // Take out first value if 0-6
-                //String rr1 = rr;
-                Matcher matcher = corsenseFixPattern.matcher(rr);
-                rr = matcher.replaceFirst("");
-                //Log.d(TAG, "|" + rr1 + "|->|" + rr + "| |");
-            }
             string += "\nR-R: " + rrString;
         } else {
             string += "\nR-R: NA";
