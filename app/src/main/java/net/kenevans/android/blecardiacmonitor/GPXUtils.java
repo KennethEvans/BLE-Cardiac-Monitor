@@ -2,7 +2,7 @@ package net.kenevans.android.blecardiacmonitor;
 
 public class GPXUtils {
     /**
-     * Lines for the beginning of a GPX file with two %s for version name and
+     * Lines for the beginning of a GPX file with two %s for creator name and
      * creation time.
      */
     public static final String GPX_FILE_START_LINES = ""
