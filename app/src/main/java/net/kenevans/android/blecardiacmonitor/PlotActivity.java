@@ -326,8 +326,8 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
             public StringBuffer format(Object obj,
                                        @NonNull StringBuffer toAppendTo,
                                        @NonNull FieldPosition pos) {
-                int yearIndex = (int) Math.round(((Number) obj).doubleValue());
-                return dateFormat.format(yearIndex, toAppendTo, pos);
+                long time = Math.round(((Number) obj).doubleValue());
+                return dateFormat.format(time, toAppendTo, pos);
             }
 
             @Override

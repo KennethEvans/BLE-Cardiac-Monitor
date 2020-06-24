@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 30
     defaultConfig {
         applicationId "net.kenevans.android.blecardiacmonitor"
         minSdkVersion 18
-        targetSdkVersion 28
-        versionCode 10
-        versionName '5.0.0'
+        targetSdkVersion 30
+        versionCode 11
+        versionName '5.1.0'
     }
     buildTypes {
         release {
@@ -29,5 +29,5 @@ android {
 dependencies {
     implementation "com.androidplot:androidplot-core:1.5.6"
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.0.2'
+    implementation 'androidx.appcompat:appcompat:1.1.0'
 }
