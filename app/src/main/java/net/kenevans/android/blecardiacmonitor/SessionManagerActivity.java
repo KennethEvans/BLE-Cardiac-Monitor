@@ -3,17 +3,19 @@ package net.kenevans.android.blecardiacmonitor;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.ContentResolver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
+import android.os.ParcelFileDescriptor;
+import android.provider.DocumentsContract;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -29,22 +31,26 @@ import android.widget.TextView;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileFilter;
-import java.io.FileReader;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
+
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
 
 public class SessionManagerActivity extends AppCompatActivity implements IConstants {
     private SessionListAdapter mSessionListAdapter;
     private BCMDbAdapter mDbAdapter;
-    private File mDataDir;
     private RestoreTask mRestoreTask;
     private ListView mListView;
 
@@ -60,26 +66,10 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         // Set result OK in case the user backs out
         setResult(Activity.RESULT_OK);
 
-        // Get the database name from the default preferences
-        SharedPreferences prefs = PreferenceManager
-                .getDefaultSharedPreferences(this);
-        String prefString = prefs.getString(PREF_DATA_DIRECTORY, null);
-        if (prefString == null) {
-            Utils.errMsg(this, "Cannot find the name of the data directory");
-            return;
-        }
-
         setContentView(R.layout.list_view);
         mListView = findViewById(R.id.mainListView);
 
-        // Open the database
-        mDataDir = new File(prefString);
-        if (!mDataDir.exists()) {
-            Utils.errMsg(this, "Cannot find database directory: " + mDataDir);
-            mDataDir = null;
-            return;
-        }
-        mDbAdapter = new BCMDbAdapter(this, mDataDir);
+        mDbAdapter = new BCMDbAdapter(this);
         mDbAdapter.open();
     }
 
@@ -121,37 +111,39 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        switch (item.getItemId()) {
-            case R.id.menu_plot:
-                plot();
-                return true;
-            case R.id.menu_discard:
-                promptToDiscardSession();
-                return true;
-            case R.id.menu_save:
-                saveSessions();
-                return true;
-            case R.id.menu_save_combined:
-                saveCombinedSessions();
-                return true;
-            case R.id.menu_save_gpx:
-                saveSessionsAsGpx();
-                return true;
-            case R.id.menu_refresh:
-                refresh();
-                return true;
-            case R.id.menu_check_all:
-                setAllSessionsChecked(true);
-                return true;
-            case R.id.menu_check_none:
-                setAllSessionsChecked(false);
-                return true;
-            case R.id.menu_save_database:
-                saveDatabase();
-                return true;
-            case R.id.menu_restore_database:
-                checkRestoreDatabase();
-                return true;
+        if (item.getItemId() == R.id.menu_plot) {
+            plot();
+            return true;
+        } else if (item.getItemId() == R.id.menu_discard) {
+            promptToDiscardSession();
+            return true;
+        } else if (item.getItemId() == R.id.menu_save) {
+            saveSessions();
+            return true;
+        } else if (item.getItemId() == R.id.menu_save_combined) {
+            saveCombinedSessions();
+            return true;
+        } else if (item.getItemId() == R.id.menu_save_gpx) {
+            saveSessionsAsGpx();
+            return true;
+        } else if (item.getItemId() == R.id.menu_refresh) {
+            refresh();
+            return true;
+        } else if (item.getItemId() == R.id.menu_check_all) {
+            setAllSessionsChecked(true);
+            return true;
+        } else if (item.getItemId() == R.id.menu_check_none) {
+            setAllSessionsChecked(false);
+            return true;
+        } else if (item.getItemId() == R.id.menu_save_database_cvs) {
+            saveDatabaseAsCsv();
+            return true;
+        } else if (item.getItemId() == R.id.menu_restore_database_cvs) {
+            checkRestoreDatabaseFrnomCvs();
+            return true;
+        } else if (item.getItemId() == R.id.menu_save_database) {
+            saveDatabase();
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -162,7 +154,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
     public void plot() {
         ArrayList<Session> checkedSessions = mSessionListAdapter
                 .getCheckedSessions();
-        if (checkedSessions == null || checkedSessions.size() == 0) {
+        if (checkedSessions.size() == 0) {
             Utils.errMsg(this, "There are no sessions to plot");
             return;
         }
@@ -181,7 +173,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         intent.putExtra(PLOT_SESSION_START_TIME_CODE, startDate);
         // // This is not currently used
         // intent.putExtra(PLOT_SESSION_END_TIME_CODE, endDate);
-        startActivityForResult(intent, REQUEST_PLOT_CODE);
+        startActivityForResult(intent, REQ_PLOT_CODE);
     }
 
     /**
@@ -204,49 +196,60 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
     public void saveSessions() {
         ArrayList<Session> checkedSessions = mSessionListAdapter
                 .getCheckedSessions();
-        if (checkedSessions == null || checkedSessions.size() == 0) {
+        if (checkedSessions.size() == 0) {
             Utils.errMsg(this, "There are no sessions to save");
             return;
         }
-        if (mDataDir == null) {
-            Utils.errMsg(this, "Cannot determine directory for save");
+        // Get the saved tree Uri
+        SharedPreferences prefs = getSharedPreferences(MAIN_ACTIVITY,
+                MODE_PRIVATE);
+        String treeUriStr = prefs.getString(PREF_TREE_URI, null);
+        if (treeUriStr == null) {
+            Utils.errMsg(this, "There is no data directory set");
             return;
         }
+        // Get a docTree Uri
+        Uri treeUri = Uri.parse(treeUriStr);
+        String treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri);
         int nErrors = 0;
         int nWriteErrors;
         String errMsg = "Error saving sessions:\n";
         String fileNames = "Saved to:\n";
-        BufferedWriter out = null;
         String fileName;
         long startDate;
-        File file;
-        FileWriter writer;
         for (Session session : checkedSessions) {
-            startDate = session.getStartDate();
-            fileName = session.getName() + ".csv";
             try {
-                file = new File(mDataDir, fileName);
-                writer = new FileWriter(file);
-                out = new BufferedWriter(writer);
-                // Write the session data
-                nWriteErrors = writeSessionDataToCvsFile(startDate, out);
-                if (nWriteErrors > 0) {
-                    nErrors += nWriteErrors;
-                    errMsg += "  " + session.getName();
+                startDate = session.getStartDate();
+                fileName = session.getName() + ".csv";
+                Uri docTreeUri =
+                        DocumentsContract.buildDocumentUriUsingTree(treeUri,
+                                treeDocumentId);
+                // Get a docUri and ParcelFileDescriptor
+                ContentResolver resolver = this.getContentResolver();
+                ParcelFileDescriptor pfd;
+                // Create the document
+                Uri docUri = DocumentsContract.createDocument(resolver,
+                        docTreeUri,
+                        "test/csv", fileName);
+                pfd = getContentResolver().
+                        openFileDescriptor(docUri, "w");
+                try (FileWriter writer =
+                             new FileWriter(pfd.getFileDescriptor());
+                     BufferedWriter out = new BufferedWriter(writer)) {
+                    // Write the session data
+                    nWriteErrors = writeSessionDataToCvsFile(startDate, out);
+                    if (nWriteErrors > 0) {
+                        nErrors += nWriteErrors;
+                        errMsg += "  " + session.getName();
+                    }
+                    fileNames += "  " + docUri.getLastPathSegment() + "\n";
                 }
-                fileNames += "  " + file.getName() + "\n";
             } catch (Exception ex) {
                 nErrors++;
                 errMsg += "  " + session.getName();
-            } finally {
-                try {
-                    if (out != null) out.close();
-                } catch (Exception ex) {
-                    // Do nothing
-                }
             }
         }
-        String msg = "Directory:\n" + mDataDir + "\n";
+        String msg = "";
         if (nErrors > 0) {
             msg += errMsg;
         }
@@ -264,69 +267,77 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
     public void saveCombinedSessions() {
         ArrayList<Session> checkedSessions = mSessionListAdapter
                 .getCheckedSessions();
-        if (checkedSessions == null || checkedSessions.size() == 0) {
+        if (checkedSessions.size() == 0) {
             Utils.errMsg(this, "There are no sessions to combine and save");
             return;
         }
-        if (mDataDir == null) {
-            Utils.errMsg(this, "Cannot determine directory for combined save");
+        // Get the saved tree Uri
+        SharedPreferences prefs = getSharedPreferences(MAIN_ACTIVITY,
+                MODE_PRIVATE);
+        String treeUriStr = prefs.getString(PREF_TREE_URI, null);
+        if (treeUriStr == null) {
+            Utils.errMsg(this, "There is no data directory set");
             return;
         }
+        // Get a docTree Uri
+        Uri treeUri = Uri.parse(treeUriStr);
+        String treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri);
         // Need to sort in order of increasing startTime
         Collections.sort(checkedSessions, new Comparator<Session>() {
             @Override
             public int compare(Session lhs, Session rhs) {
-                if (lhs.getStartDate() == rhs.getStartDate()) {
-                    return 0;
-                } else if (lhs.getStartDate() > rhs.getStartDate()) {
-                    return 1;
-                } else {
-                    return -1;
-                }
+                return Long.compare(lhs.getStartDate(), rhs.getStartDate());
             }
         });
         int nErrors = 0;
         int nWriteErrors;
         String errMsg = "Error saving combined sessions:\n";
         String fileNames = "Saved to:\n";
-        BufferedWriter out = null;
         // Use the name of the first session
         String fileName = checkedSessions.get(0).getName() + "-Combined.csv";
         long startDate;
-        File file;
-        FileWriter writer;
         try {
-            file = new File(mDataDir, fileName);
-            writer = new FileWriter(file);
-            out = new BufferedWriter(writer);
-            boolean first = true;
-            for (Session session : checkedSessions) {
-                startDate = session.getStartDate();
-                // Write a blank line to separate sessions
-                if (first) {
-                    first = false;
-                } else {
-                    out.write("\n");
+            Uri docTreeUri =
+                    DocumentsContract.buildDocumentUriUsingTree(treeUri,
+                            treeDocumentId);
+            // Get a docUri and ParcelFileDescriptor
+            ContentResolver resolver = this.getContentResolver();
+            ParcelFileDescriptor pfd;
+            // Create the document
+            Uri docUri = DocumentsContract.createDocument(resolver,
+                    docTreeUri,
+                    "text/csv", fileName);
+            pfd = getContentResolver().
+                    openFileDescriptor(docUri, "w");
+            // Do the writing with a BufferedWriter or other
+            try (FileWriter writer =
+                         new FileWriter(pfd.getFileDescriptor());
+                 BufferedWriter out = new BufferedWriter(writer)) {
+                boolean first = true;
+                for (Session session : checkedSessions) {
+                    startDate = session.getStartDate();
+                    // Write a blank line to separate sessions
+                    if (first) {
+                        first = false;
+                    } else {
+                        out.write("\n");
+                    }
+                    // Write the session data
+                    nWriteErrors = writeSessionDataToCvsFile(startDate, out);
+                    if (nWriteErrors > 0) {
+                        nErrors += nWriteErrors;
+                        errMsg += "  " + session.getName();
+                    }
                 }
-                // Write the session data
-                nWriteErrors = writeSessionDataToCvsFile(startDate, out);
-                if (nWriteErrors > 0) {
-                    nErrors += nWriteErrors;
-                    errMsg += "  " + session.getName();
-                }
-            }
-            fileNames += "  " + file.getName() + "\n";
-        } catch (Exception ex) {
-            nErrors++;
-            errMsg += "  " + "Writing combined file";
-        } finally {
-            try {
-                if (out != null) out.close();
+                fileNames += "  " + docUri.getLastPathSegment() + "\n";
             } catch (Exception ex) {
-                // Do nothing
+                nErrors++;
+                errMsg += "  " + "Writing combined file";
             }
+        } catch (Exception ex) {
+            Utils.excMsg(this, "Error saving combined sessions", ex);
         }
-        String msg = "Directory:\n" + mDataDir + "\n";
+        String msg = "";
         if (nErrors > 0) {
             msg += errMsg;
         }
@@ -347,10 +358,9 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
      * @return The number of errors.
      */
     private int writeSessionDataToCvsFile(long startDate, BufferedWriter out) {
-        Cursor cursor = null;
         int nErrors = 0;
-        try {
-            cursor = mDbAdapter.fetchAllHrRrDateDataForStartDate(startDate);
+        try (Cursor cursor =
+                     mDbAdapter.fetchAllHrRrDateDataForStartDate(startDate)) {
             int indexDate = cursor.getColumnIndex(COL_DATE);
             int indexHr = cursor.getColumnIndex(COL_HR);
             int indexRr = cursor.getColumnIndex(COL_RR);
@@ -379,12 +389,6 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
             }
         } catch (Exception ex) {
             nErrors++;
-        } finally {
-            try {
-                if (cursor != null) cursor.close();
-            } catch (Exception ex) {
-                // Do nothing
-            }
         }
         return nErrors;
     }
@@ -395,23 +399,26 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
     public void saveSessionsAsGpx() {
         ArrayList<Session> checkedSessions = mSessionListAdapter
                 .getCheckedSessions();
-        if (checkedSessions == null || checkedSessions.size() == 0) {
+        if (checkedSessions.size() == 0) {
             Utils.errMsg(this, "There are no sessions to save");
             return;
         }
-        if (mDataDir == null) {
-            Utils.errMsg(this, "Cannot determine directory for save");
+        // Get the saved tree Uri
+        SharedPreferences prefs = getSharedPreferences(MAIN_ACTIVITY,
+                MODE_PRIVATE);
+        String treeUriStr = prefs.getString(PREF_TREE_URI, null);
+        if (treeUriStr == null) {
+            Utils.errMsg(this, "There is no data directory set");
             return;
         }
+        // Get a docTree Uri
+        Uri treeUri = Uri.parse(treeUriStr);
+        String treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri);
         int nErrors = 0;
         String errMsg = "Error saving sessions:\n";
         String fileNames = "Saved to:\n";
-        BufferedWriter out = null;
-        Cursor cursor = null;
         String fileName;
         long startDate;
-        File file;
-        FileWriter writer;
         String name;
         SimpleDateFormat formatter = new SimpleDateFormat(
                 "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
@@ -424,57 +431,61 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
             name = "BLE Cardiac Monitor";
         }
         for (Session session : checkedSessions) {
-            startDate = session.getStartDate();
-            fileName = session.getName() + ".gpx";
             try {
-                file = new File(mDataDir, fileName);
-                writer = new FileWriter(file);
-                out = new BufferedWriter(writer);
-                // Write the beginning lines
-                out.write(String.format(GPXUtils.GPX_FILE_START_LINES, name,
-                        formatter.format(new Date())));
-                cursor = mDbAdapter.fetchAllHrDateDataForStartDate(startDate);
-                int indexDate = cursor.getColumnIndex(COL_DATE);
-                int indexHr = cursor.getColumnIndex(COL_HR);
-                // Loop over items
-                cursor.moveToFirst();
-                String hrStr, line;
-                long dateNum = INVALID_DATE;
-                while (!cursor.isAfterLast()) {
-                    if (indexDate > -1) {
-                        dateNum = cursor.getLong(indexDate);
+                startDate = session.getStartDate();
+                fileName = session.getName() + ".gpx";
+                Uri docTreeUri =
+                        DocumentsContract.buildDocumentUriUsingTree(treeUri,
+                                treeDocumentId);
+                // Get a docUri and ParcelFileDescriptor
+                ContentResolver resolver = this.getContentResolver();
+                ParcelFileDescriptor pfd;
+                // Create the document
+                Uri docUri = DocumentsContract.createDocument(resolver,
+                        docTreeUri,
+                        "application/gpx+xml", fileName);
+                pfd = getContentResolver().
+                        openFileDescriptor(docUri, "w");
+                // Do the writing with a BufferedWriter or other
+                try (FileWriter writer =
+                             new FileWriter(pfd.getFileDescriptor());
+                     BufferedWriter out = new BufferedWriter(writer);
+                     Cursor cursor =
+                             mDbAdapter.fetchAllHrDateDataForStartDate(startDate)) {
+                    // Write the beginning lines
+                    out.write(String.format(GPXUtils.GPX_FILE_START_LINES, name,
+                            formatter.format(new Date())));
+                    int indexDate = cursor.getColumnIndex(COL_DATE);
+                    int indexHr = cursor.getColumnIndex(COL_HR);
+                    // Loop over items
+                    cursor.moveToFirst();
+                    String hrStr, line;
+                    long dateNum = INVALID_DATE;
+                    while (!cursor.isAfterLast()) {
+                        if (indexDate > -1) {
+                            dateNum = cursor.getLong(indexDate);
+                        }
+                        hrStr = INVALID_STRING;
+                        if (indexHr > -1) {
+                            hrStr = cursor.getString(indexHr);
+                        }
+                        if (hrStr.equals(INVALID_STRING)) {
+                            continue;
+                        }
+                        line = String.format(GPXUtils.GPX_FILE_TRACK_LINES,
+                                formatter.format(new Date(dateNum)), hrStr);
+                        out.write(line);
+                        cursor.moveToNext();
                     }
-                    hrStr = INVALID_STRING;
-                    if (indexHr > -1) {
-                        hrStr = cursor.getString(indexHr);
-                    }
-                    if (hrStr.equals(INVALID_STRING)) {
-                        continue;
-                    }
-                    line = String.format(GPXUtils.GPX_FILE_TRACK_LINES,
-                            formatter.format(new Date(dateNum)), hrStr);
-                    out.write(line);
-                    cursor.moveToNext();
+                    out.write(GPXUtils.GPX_FILE_END_LINES);
+                    fileNames += "  " + docUri.getLastPathSegment() + "\n";
                 }
-                out.write(GPXUtils.GPX_FILE_END_LINES);
-                fileNames += "  " + file.getName() + "\n";
             } catch (Exception ex) {
                 nErrors++;
                 errMsg += "  " + session.getName();
-            } finally {
-                try {
-                    if (cursor != null) cursor.close();
-                } catch (Exception ex) {
-                    // Do nothing
-                }
-                try {
-                    if (out != null) out.close();
-                } catch (Exception ex) {
-                    // Do nothing
-                }
             }
         }
-        String msg = "Directory:\n" + mDataDir + "\n";
+        String msg = "";
         if (nErrors > 0) {
             msg += errMsg;
         }
@@ -495,7 +506,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
     public void promptToDiscardSession() {
         ArrayList<Session> checkedSessions = mSessionListAdapter
                 .getCheckedSessions();
-        if (checkedSessions == null || checkedSessions.size() == 0) {
+        if (checkedSessions.size() == 0) {
             Utils.errMsg(this, "There are no sessions to discard");
             return;
         }
@@ -522,7 +533,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
     public void doDiscardSession() {
         ArrayList<Session> checkedSessions = mSessionListAdapter
                 .getCheckedSessions();
-        if (checkedSessions == null || checkedSessions.size() == 0) {
+        if (checkedSessions.size() == 0) {
             Utils.errMsg(this, "There are no sessions to discard");
             return;
         }
@@ -534,91 +545,166 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         refresh();
     }
 
-    /**
-     * Saves the database as a CSV file with a .txt extension.
-     */
     private void saveDatabase() {
-        BufferedWriter out = null;
-        Cursor cursor = null;
+        SharedPreferences prefs = getSharedPreferences(MAIN_ACTIVITY,
+                MODE_PRIVATE);
+        String treeUriStr = prefs.getString(PREF_TREE_URI, null);
+        if (treeUriStr == null) {
+            Utils.errMsg(this, "There is no data directory set");
+            return;
+        }
+        FileInputStream inputStream = null;
+        OutputStream outputStream = null;
         try {
-            if (mDataDir == null) {
-                Utils.errMsg(this, "Cannot determine directory for save");
-                return;
-            }
             String format = "yyyy-MM-dd-HHmmss";
             SimpleDateFormat df = new SimpleDateFormat(format, Locale.US);
             Date now = new Date();
-            String fileName = String.format(SAVE_DATABASE_FILENAME_TEMPLATE,
+            String fileName = String.format(saveDatabaseTemplate,
                     df.format(now));
-            File file = new File(mDataDir, fileName);
-            FileWriter writer = new FileWriter(file);
-            out = new BufferedWriter(writer);
-            cursor = mDbAdapter.fetchAllData(null);
-            int indexDate = cursor.getColumnIndex(COL_DATE);
-            int indexStartDate = cursor.getColumnIndex(COL_START_DATE);
-            int indexHr = cursor.getColumnIndex(COL_HR);
-            int indexRr = cursor.getColumnIndex(COL_RR);
-            // Loop over items
-            cursor.moveToFirst();
-            String rr, info;
-            long dateNum, startDateNum;
-            int hr;
-            while (!cursor.isAfterLast()) {
-                dateNum = startDateNum = INVALID_DATE;
-                hr = INVALID_INT;
-                rr = " ";
-                if (indexDate > -1) {
-                    try {
-                        dateNum = cursor.getLong(indexDate);
-                    } catch (Exception ex) {
-                        // Do nothing
-                    }
-                }
-                if (indexStartDate > -1) {
-                    try {
-                        startDateNum = cursor.getLong(indexStartDate);
-                    } catch (Exception ex) {
-                        // Do nothing
-                    }
-                }
-                if (indexHr > -1) {
-                    try {
-                        hr = cursor.getInt(indexHr);
-                    } catch (Exception ex) {
-                        // Do nothing
-                    }
-                }
-                if (indexRr > -1) {
-                    try {
-                        rr = cursor.getString(indexRr);
-                    } catch (Exception ex) {
-                        // Do nothing
-                    }
-                    // Need to do this, or it isn't recognized as a token
-                    if (rr.length() == 0) {
-                        rr = " ";
-                    }
-                }
-                info = String.format(Locale.US, "%d%s%d%s%d%s%s%s\n", dateNum,
-                        SAVE_DATABASE_DELIM, startDateNum, SAVE_DATABASE_DELIM,
-                        hr, SAVE_DATABASE_DELIM, rr, SAVE_DATABASE_DELIM);
-                out.write(info);
-                cursor.moveToNext();
+            Uri treeUri = Uri.parse(treeUriStr);
+            String treeDocumentId =
+                    DocumentsContract.getTreeDocumentId(treeUri);
+            Uri docTreeUri =
+                    DocumentsContract.buildDocumentUriUsingTree(treeUri,
+                            treeDocumentId);
+            ContentResolver resolver = this.getContentResolver();
+            Uri docUri = DocumentsContract.createDocument(resolver, docTreeUri,
+                    "application/vnd.sqlite3", fileName);
+            if (docUri == null) {
+                Utils.errMsg(this, "Could not create document Uri");
+                return;
             }
-            Utils.infoMsg(this, "Wrote " + file.getPath());
+            Log.d(TAG, "saveDatabase: docUri=" + docUri);
+            try {
+                // Close the database
+                if (mDbAdapter != null) {
+                    mDbAdapter.close();
+                }
+                File file = new File(getExternalFilesDir(null), DB_NAME);
+                inputStream = new FileInputStream(file);
+                ParcelFileDescriptor pfd = getContentResolver().
+                        openFileDescriptor(docUri, "w");
+                outputStream =
+                        new FileOutputStream(pfd.getFileDescriptor());
+                byte[] buff = new byte[1024];
+                int read;
+                while ((read = inputStream.read(buff, 0, buff.length)) > 0)
+                    outputStream.write(buff, 0, read);
+            } catch (Exception ex) {
+                String msg =
+                        "Failed to save database";
+                Utils.excMsg(this, msg, ex);
+                Log.e(TAG, msg, ex);
+            } finally {
+                if (inputStream != null) inputStream.close();
+                if (outputStream != null) outputStream.close();
+                if (mDbAdapter != null) {
+                    mDbAdapter.open();
+                }
+            }
+            Utils.infoMsg(this, "Wrote " + docUri.getLastPathSegment());
         } catch (Exception ex) {
-            Utils.excMsg(this, "Error saving database", ex);
-        } finally {
-            try {
-                if (cursor != null) cursor.close();
-            } catch (Exception ex) {
-                // Do nothing
+            String msg = "Error saving to SD card";
+            Utils.excMsg(this, msg, ex);
+            Log.e(TAG, msg, ex);
+        }
+    }
+
+    /**
+     * Saves the database as a CSV file with a .txt extension.
+     */
+    private void saveDatabaseAsCsv() {
+        // Get the saved tree Uri
+        SharedPreferences prefs = getSharedPreferences(MAIN_ACTIVITY,
+                MODE_PRIVATE);
+        String treeUriStr = prefs.getString(PREF_TREE_URI, null);
+        if (treeUriStr == null) {
+            Utils.errMsg(this, "There is no data directory set");
+            return;
+        }
+        // Determine the filename
+        String format = "yyyy-MM-dd-HHmmss";
+        SimpleDateFormat df = new SimpleDateFormat(format, Locale.US);
+        Date now = new Date();
+        String fileName = String.format(SAVE_DATABASE_FILENAME_TEMPLATE,
+                df.format(now));
+        // Get a docTree Uri
+        Uri treeUri = Uri.parse(treeUriStr);
+        String treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri);
+        try {
+            Uri docTreeUri =
+                    DocumentsContract.buildDocumentUriUsingTree(treeUri,
+                            treeDocumentId);
+            // Get a docUri and ParcelFileDescriptor
+            ContentResolver resolver = this.getContentResolver();
+            ParcelFileDescriptor pfd;
+            // Create the document
+            Uri docUri = DocumentsContract.createDocument(resolver,
+                    docTreeUri,
+                    "text/csv", fileName);
+            pfd = getContentResolver().
+                    openFileDescriptor(docUri, "w");
+            try (FileWriter writer =
+                         new FileWriter(pfd.getFileDescriptor());
+                 BufferedWriter out = new BufferedWriter(writer);
+                 Cursor cursor = mDbAdapter.fetchAllData(null)) {
+                int indexDate = cursor.getColumnIndex(COL_DATE);
+                int indexStartDate = cursor.getColumnIndex(COL_START_DATE);
+                int indexHr = cursor.getColumnIndex(COL_HR);
+                int indexRr = cursor.getColumnIndex(COL_RR);
+                // Loop over items
+                cursor.moveToFirst();
+                String rr, info;
+                long dateNum, startDateNum;
+                int hr;
+                while (!cursor.isAfterLast()) {
+                    dateNum = startDateNum = INVALID_DATE;
+                    hr = INVALID_INT;
+                    rr = " ";
+                    if (indexDate > -1) {
+                        try {
+                            dateNum = cursor.getLong(indexDate);
+                        } catch (Exception ex) {
+                            // Do nothing
+                        }
+                    }
+                    if (indexStartDate > -1) {
+                        try {
+                            startDateNum = cursor.getLong(indexStartDate);
+                        } catch (Exception ex) {
+                            // Do nothing
+                        }
+                    }
+                    if (indexHr > -1) {
+                        try {
+                            hr = cursor.getInt(indexHr);
+                        } catch (Exception ex) {
+                            // Do nothing
+                        }
+                    }
+                    if (indexRr > -1) {
+                        try {
+                            rr = cursor.getString(indexRr);
+                        } catch (Exception ex) {
+                            // Do nothing
+                        }
+                        // Need to do this, or it isn't recognized as a token
+                        if (rr.length() == 0) {
+                            rr = " ";
+                        }
+                    }
+                    info = String.format(Locale.US, "%d%s%d%s%d%s%s%s\n",
+                            dateNum,
+                            SAVE_DATABASE_DELIM, startDateNum,
+                            SAVE_DATABASE_DELIM,
+                            hr, SAVE_DATABASE_DELIM, rr, SAVE_DATABASE_DELIM);
+                    out.write(info);
+                    cursor.moveToNext();
+                }
+                Utils.infoMsg(this, "Wrote " + docUri.getLastPathSegment());
             }
-            try {
-                if (out != null) out.close();
-            } catch (Exception ex) {
-                // Do nothing
-            }
+        } catch (Exception ex) {
+            Utils.excMsg(this, "Error saving database as CSV", ex);
         }
     }
 
@@ -627,42 +713,41 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
      * delete the current data, and call restoreData to actually do the delete
      * and restore.
      */
-    private void checkRestoreDatabase() {
-        if (mDataDir == null) {
-            Utils.errMsg(this, "Cannot find data directory");
+    private void checkRestoreDatabaseFrnomCvs() {
+        // Get the saved tree Uri
+        SharedPreferences prefs = getSharedPreferences(MAIN_ACTIVITY,
+                MODE_PRIVATE);
+        String treeUriStr = prefs.getString(PREF_TREE_URI, null);
+        if (treeUriStr == null) {
+            Utils.errMsg(this, "There is no data directory set");
             return;
         }
 
-        // Find the .txt files in the data directory
-        final File[] files = mDataDir.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File file) {
-                if (file.isDirectory()) {
-                    return false;
-                }
-                String name = file.getName();
-                return name.startsWith(SAVE_DATABASE_FILENAME_PREFIX)
-                        && name.endsWith(SAVE_DATABASE_FILENAME_SUFFIX);
-            }
-        });
-        if (files == null || files.length == 0) {
+        final List<UriData> uriList;
+        try {
+            uriList = getUriList(this);
+        } catch (Exception ex) {
+            Utils.excMsg(this, "Failed to get list of available files", ex);
+            return;
+        }
+        if (uriList == null || uriList.size() == 0) {
             Utils.errMsg(this,
                     "There are no saved database files in the data directory");
             return;
         }
 
         // Sort them by date with newest first
-        Arrays.sort(files, new Comparator<File>() {
-            public int compare(File f1, File f2) {
-                return Long.valueOf(f2.lastModified()).compareTo(
-                        f1.lastModified());
+        final int len = uriList.size();
+        Collections.sort(uriList, new Comparator<UriData>() {
+            public int compare(UriData data1, UriData data2) {
+                return Long.compare(data2.lastModified, data1.lastModified);
             }
         });
 
         // Prompt for the file to use
-        final CharSequence[] items = new CharSequence[files.length];
-        for (int i = 0; i < files.length; i++) {
-            items[i] = files[i].getName();
+        final CharSequence[] items = new CharSequence[uriList.size()];
+        for (int i = 0; i < len; i++) {
+            items[i] = uriList.get(i).displayName;
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(getText(R.string.select_restore_file));
@@ -671,7 +756,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
                     public void onClick(DialogInterface dialog, final int
                             item) {
                         dialog.dismiss();
-                        if (item < 0 || item >= files.length) {
+                        if (item < 0 || item >= len) {
                             Utils.errMsg(SessionManagerActivity.this,
                                     "Invalid item");
                             return;
@@ -688,7 +773,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
                                                     DialogInterface dialog,
                                                     int which) {
                                                 dialog.dismiss();
-                                                restoreDatabase(files[item]);
+                                                restoreDatabaseFromCvs(uriList.get(item).uri);
                                             }
 
                                         })
@@ -703,22 +788,79 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
     /**
      * Deletes the existing data without prompting and restores the new data.
      */
-    private void restoreDatabase(File file) {
-        if (!file.exists()) {
-            Utils.errMsg(this, "Cannot find:\n" + file.getPath());
-            return;
-        }
+    private void restoreDatabaseFromCvs(Uri uri) {
         if (mRestoreTask != null) {
             // Don't do anything if we are updating
             Log.d(TAG,
                     this.getClass().getSimpleName()
                             + ": restoreDatabase: restoreTask is not null for "
-                            + file.getName());
+                            + uri.getLastPathSegment());
             return;
         }
 
-        mRestoreTask = new RestoreTask(file);
+        mRestoreTask = new RestoreTask(this, uri);
         mRestoreTask.execute();
+    }
+
+    /**
+     * Get the list of available restore files.
+     *
+     * @param context The context.
+     * @return The list.
+     */
+    public static List<UriData> getUriList(Context context) {
+        ContentResolver contentResolver = context.getContentResolver();
+        SharedPreferences prefs = context.getSharedPreferences(
+                "DeviceMonitorActivity", Context.MODE_PRIVATE);
+        String treeUriStr = prefs.getString(PREF_TREE_URI, null);
+        if (treeUriStr == null) {
+            Utils.errMsg(context, "There is no tree Uri set");
+            return null;
+        }
+        Uri treeUri = Uri.parse(treeUriStr);
+        Uri childrenUri =
+                DocumentsContract.buildChildDocumentsUriUsingTree(treeUri,
+                        DocumentsContract.getTreeDocumentId(treeUri));
+        List<UriData> uriList = new ArrayList<>();
+        String[] projection = {
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                DocumentsContract.Document.COLUMN_LAST_MODIFIED,
+        };
+
+        try (Cursor cursor = contentResolver.query(childrenUri, projection,
+                null, null, null)) {
+            if (cursor == null) return null;
+            String documentId;
+            Uri documentUri;
+            String displayName;
+            long lastModified;
+            while (cursor.moveToNext()) {
+                documentUri = null;
+                if (cursor.getColumnIndex(projection[0]) != -1) {
+                    documentId = cursor.getString(0);
+                    documentUri =
+                            DocumentsContract.buildDocumentUriUsingTree(treeUri,
+                                    documentId);
+                }
+                if (documentUri == null) continue;
+
+                displayName = "<NA>";
+                if (cursor.getColumnIndex(projection[1]) != -1) {
+                    displayName = cursor.getString(1);
+                }
+                lastModified = -1;
+                if (cursor.getColumnIndex(projection[2]) != -1) {
+                    lastModified = cursor.getLong(2);
+                }
+                if (displayName.startsWith(SAVE_DATABASE_FILENAME_PREFIX)
+                        && displayName.endsWith(SAVE_DATABASE_FILENAME_SUFFIX)) {
+                    uriList.add(new UriData(documentUri, displayName,
+                            lastModified));
+                }
+            }
+        }
+        return uriList;
     }
 
     /**
@@ -731,21 +873,24 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
     }
 
     /**
-     * Class to handle getting the bitmap from the web using a progress bar that
+     * Class to handle getting the bitmap from the web using a progress
+     * bar that
      * can be cancelled.<br>
      * <br>
      * Call with <b>Bitmap bitmap = new MyUpdateTask().execute(String)<b>
      */
     private class RestoreTask extends AsyncTask<Void, Void, Boolean> {
         private ProgressDialog dialog;
-        private File file;
+        private Context mCtx;
+        private Uri mUri;
         private int mErrors;
         private int mLineNumber;
         private String mExceptionMsg;
 
-        private RestoreTask(File file) {
+        private RestoreTask(Context context, Uri uri) {
             super();
-            this.file = file;
+            this.mCtx = context;
+            this.mUri = uri;
         }
 
         @Override
@@ -761,79 +906,77 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         @Override
         protected Boolean doInBackground(Void... dummy) {
             Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
-            BufferedReader in = null;
             try {
                 // Delete all the data and recreate the table
                 mDbAdapter.recreateDataTable();
-
-                // Read the file and get the data to restore
-                in = new BufferedReader(new FileReader(file));
-                String rr;
-                long dateNum, startDateNum;
-                int hr;
-                String[] tokens;
-                String line;
-                while ((line = in.readLine()) != null) {
-                    dateNum = startDateNum = INVALID_DATE;
-                    mLineNumber++;
-                    tokens = line.trim().split(SAVE_DATABASE_DELIM);
-                    // Skip blank lines
-                    if (line.trim().length() == 0) {
-                        continue;
-                    }
-                    // Skip lines starting with #
-                    if (tokens[0].trim().startsWith("#")) {
-                        continue;
-                    }
-                    hr = 0;
-                    if (tokens.length < 4) {
-                        // Utils.errMsg(this, "Found " + tokens.length
-                        // + " tokens for line " + lineNum
-                        // + "\nShould be 5 or more tokens");
-                        mErrors++;
-                        Log.d(TAG, "tokens.length=" + tokens.length
-                                + " @ line " + mLineNumber);
-                        Log.d(TAG, line);
-                        continue;
-                    }
-                    try {
-                        dateNum = Long.parseLong(tokens[0]);
-                    } catch (Exception ex) {
-                        Log.d(TAG, "Long.parseLong failed for dateNum @ line "
-                                + mLineNumber);
-                    }
-                    try {
-                        startDateNum = Long.parseLong(tokens[1]);
-                    } catch (Exception ex) {
-                        Log.d(TAG,
-                                "Long.parseLong failed for startDateNum @ line "
-                                        + mLineNumber);
-                    }
-                    try {
-                        hr = Integer.parseInt(tokens[2]);
-                    } catch (Exception ex) {
-                        Log.d(TAG, "Integer.parseInt failed for hr @ line "
-                                + mLineNumber);
-                    }
-                    rr = tokens[3].trim();
-                    // Write the row
-                    long id = mDbAdapter.createData(dateNum, startDateNum, hr,
-                            rr);
-                    if (id < 0) {
-                        mErrors++;
+                try (InputStreamReader inputStreamReader =
+                             new InputStreamReader(
+                                     mCtx.getContentResolver().openInputStream(mUri));
+                     BufferedReader in =
+                             new BufferedReader(inputStreamReader)) {
+                    // Read the file and get the data to restore
+                    String rr;
+                    long dateNum, startDateNum;
+                    int hr;
+                    String[] tokens;
+                    String line;
+                    while ((line = in.readLine()) != null) {
+                        dateNum = startDateNum = INVALID_DATE;
+                        mLineNumber++;
+                        tokens = line.trim().split(SAVE_DATABASE_DELIM);
+                        // Skip blank lines
+                        if (line.trim().length() == 0) {
+                            continue;
+                        }
+                        // Skip lines starting with #
+                        if (tokens[0].trim().startsWith("#")) {
+                            continue;
+                        }
+                        hr = 0;
+                        if (tokens.length < 4) {
+                            // Utils.errMsg(this, "Found " + tokens.length
+                            // + " tokens for line " + lineNum
+                            // + "\nShould be 5 or more tokens");
+                            mErrors++;
+                            Log.d(TAG, "tokens.length=" + tokens.length
+                                    + " @ line " + mLineNumber);
+                            Log.d(TAG, line);
+                            continue;
+                        }
+                        try {
+                            dateNum = Long.parseLong(tokens[0]);
+                        } catch (Exception ex) {
+                            Log.d(TAG, "Long.parseLong failed for dateNum @ " +
+                                    "line "
+                                    + mLineNumber);
+                        }
+                        try {
+                            startDateNum = Long.parseLong(tokens[1]);
+                        } catch (Exception ex) {
+                            Log.d(TAG,
+                                    "Long.parseLong failed for startDateNum @" +
+                                            " line "
+                                            + mLineNumber);
+                        }
+                        try {
+                            hr = Integer.parseInt(tokens[2]);
+                        } catch (Exception ex) {
+                            Log.d(TAG, "Integer.parseInt failed for hr @ line "
+                                    + mLineNumber);
+                        }
+                        rr = tokens[3].trim();
+                        // Write the row
+                        long id = mDbAdapter.createData(dateNum, startDateNum
+                                , hr,
+                                rr);
+                        if (id < 0) {
+                            mErrors++;
+                        }
                     }
                 }
             } catch (Exception ex) {
                 mExceptionMsg = "Got Exception restoring at line "
                         + mLineNumber + "\n" + ex.getMessage();
-            } finally {
-                try {
-                    if (in != null) {
-                        in.close();
-                    }
-                } catch (Exception ex) {
-                    // Do nothing
-                }
             }
             return true;
         }
@@ -849,10 +992,10 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
             String info;
             if (mErrors == 0) {
                 info = "Restored " + mLineNumber + " lines from "
-                        + file.getPath();
+                        + mUri.getLastPathSegment();
             } else {
                 info = "Got " + mErrors + " errors processing " + mLineNumber
-                        + " lines from " + file.getPath();
+                        + " lines from " + mUri.getLastPathSegment();
                 if (mExceptionMsg != null) {
                     info += "\n" + mExceptionMsg;
                 }
@@ -1002,7 +1145,8 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
             ViewHolder viewHolder;
             // General ListView optimization code.
             if (view == null) {
-                view = mInflator.inflate(R.layout.listitem_session, viewGroup,
+                view = mInflator.inflate(R.layout.listitem_session,
+                        viewGroup,
                         false);
                 viewHolder = new ViewHolder();
                 viewHolder.sessionCheckbox = view
@@ -1042,7 +1186,8 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
                 double duration = session.getDuration();
                 int durationDays = (int) (duration / (3600000. * 24));
 
-                int durationHours = (int) (duration / 3600000.) - durationDays;
+                int durationHours =
+                        (int) (duration / 3600000.) - durationDays;
                 int durationMin = (int) (duration / 60000.) - durationHours
                         * 60;
                 int durationSec = (int) (duration / 1000.) - durationHours
@@ -1108,4 +1253,24 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         TextView sessionDuration;
     }
 
+    /**
+     * Convenience class for managing Uri information.
+     */
+    public static class UriData {
+        final public Uri uri;
+        final public String displayName;
+        final public long lastModified;
+
+        UriData(Uri uri, String displayName, long lastModified) {
+            this.uri = uri;
+            this.displayName = displayName;
+            this.lastModified = lastModified;
+        }
+
+        @androidx.annotation.NonNull
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
 }

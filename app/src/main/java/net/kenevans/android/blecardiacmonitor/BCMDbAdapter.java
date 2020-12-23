@@ -1,6 +1,5 @@
 package net.kenevans.android.blecardiacmonitor;
 
-import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -18,8 +17,7 @@ import java.io.File;
 public class BCMDbAdapter implements IConstants {
     private DatabaseHelper mDbHelper;
     private SQLiteDatabase mDb;
-    private final Activity mActivity;
-    private File mDataDir;
+    private final Context mCtx;
 
     /**
      * Database creation SQL statement
@@ -34,12 +32,10 @@ public class BCMDbAdapter implements IConstants {
      * Constructor - takes the context to allow the database to be
      * opened/created
      *
-     * @param activity The context.
-     * @param dataDir  The location of the data.
+     * @param ctx     The context.
      */
-    public BCMDbAdapter(Activity activity, File dataDir) {
-        mActivity = activity;
-        mDataDir = dataDir;
+    public BCMDbAdapter(Context ctx) {
+        mCtx = ctx;
     }
 
     /**
@@ -53,42 +49,28 @@ public class BCMDbAdapter implements IConstants {
      */
     public BCMDbAdapter open() throws SQLException {
         // Make sure the directory exists and is available
-        if (mDataDir == null) {
-            mActivity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Utils.errMsg(mActivity, "Cannot access database");
-                }
-            });
-            return null;
-        }
+        File dataDir = mCtx.getExternalFilesDir(null);
         try {
-            if (!mDataDir.exists()) {
-                mDataDir.mkdirs();
+            if (!dataDir.exists()) {
+                boolean res = dataDir.mkdirs();
+                if (!res) {
+                    Utils.errMsg(mCtx,
+                            "Creating directory failed\n" + dataDir);
+                    return null;
+                }
                 // Try again
-                if (!mDataDir.exists()) {
-                    mActivity.runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Utils.errMsg(mActivity,
-                                    "Unable to create database directory at "
-                                            + mDataDir);
-                        }
-                    });
+                if (!dataDir.exists()) {
+                    Utils.errMsg(mCtx,
+                            "Unable to create database directory at "
+                                    + dataDir);
                     return null;
                 }
             }
-            mDbHelper = new DatabaseHelper(mActivity, mDataDir.getPath()
+            mDbHelper = new DatabaseHelper(mCtx, dataDir.getPath()
                     + File.separator + DB_NAME);
             mDb = mDbHelper.getWritableDatabase();
-        } catch (final Exception ex) {
-            mActivity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Utils.excMsg(mActivity, "Error opening database at "
-                            + mDataDir, ex);
-                }
-            });
+        } catch (Exception ex) {
+            Utils.excMsg(mCtx, "Error opening database at " + dataDir, ex);
         }
         return this;
     }
@@ -102,21 +84,15 @@ public class BCMDbAdapter implements IConstants {
      * successfully created return the new rowId for that entry, otherwise
      * return a -1 to indicate failure.
      *
-     * @param date
-     * @param startDate
-     * @param hr
-     * @param rr
-     * @return
+     * @param date The date.
+     * @param startDate The start date.
+     * @param hr The HR.
+     * @param rr The RR.
+     * @return RowId or -1 on failure.
      */
     public long createData(long date, long startDate, int hr, String rr) {
         if (mDb == null) {
-            mActivity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Utils.errMsg(mActivity,
-                            "Failed to create data. Database is null.");
-                }
-            });
+            Utils.errMsg(mCtx, "Failed to create data. Database is null.");
             return -1;
         }
         ContentValues values = new ContentValues();
@@ -131,7 +107,6 @@ public class BCMDbAdapter implements IConstants {
     /**
      * Delete all the data and recreate the table.
      *
-     * @return true if deleted, false otherwise.
      */
     public void recreateDataTable() {
         mDb.execSQL("DROP TABLE IF EXISTS " + DB_DATA_TABLE);
@@ -184,12 +159,12 @@ public class BCMDbAdapter implements IConstants {
      * Update the data using the details provided. The data to be updated is
      * specified using the rowId, and it is altered to use the values passed in.
      *
-     * @param rowId
-     * @param date
-     * @param startDate
-     * @param hr
-     * @param rr
-     * @return
+     * @param rowId The rowId.
+     * @param date The date.
+     * @param startDate The start date.
+     * @param hr The HR.
+     * @param rr The RR.
+     * @return Ehether successful.
      */
     public boolean updateData(long rowId, long date, long startDate, int hr,
                               String rr) {
@@ -225,19 +200,19 @@ public class BCMDbAdapter implements IConstants {
      * Deletes all data in the database for the interval corresponding to the
      * given the start date.
      *
-     * @param start
-     * @return
+     * @param start The start date.
+     * @return Whether successful.
      */
     public boolean deleteAllDataForStartDate(long start) {
         return mDb.delete(DB_DATA_TABLE,
-                COL_START_DATE + "=" + Long.toString(start), null) > 0;
+                COL_START_DATE + "=" + start, null) > 0;
     }
 
     /**
      * Return a Cursor over the HR items in the database having the given the
      * start date.
      *
-     * @param date
+     * @param date The start date.
      * @return Cursor over items.
      */
     public Cursor fetchAllHrDateDataForStartDate(long date) {
@@ -245,7 +220,7 @@ public class BCMDbAdapter implements IConstants {
             return null;
         }
         return mDb.query(DB_DATA_TABLE, new String[]{COL_DATE, COL_HR},
-                COL_START_DATE + "=" + Long.toString(date), null, null, null,
+                COL_START_DATE + "=" + date, null, null, null,
                 SORT_ASCENDING);
     }
 
@@ -253,7 +228,7 @@ public class BCMDbAdapter implements IConstants {
      * Return a Cursor over the HR and RR items in the database having the given
      * the start date
      *
-     * @param date
+     * @param date The start date.
      * @return Cursor over items.
      */
     public Cursor fetchAllHrRrDateDataForStartDate(long date) {
@@ -263,7 +238,7 @@ public class BCMDbAdapter implements IConstants {
         return mDb
                 .query(DB_DATA_TABLE,
                         new String[]{COL_DATE, COL_HR, COL_RR},
-                        COL_START_DATE + "=" + Long.toString(date), null, null,
+                        COL_START_DATE + "=" + date, null, null,
                         null, SORT_ASCENDING);
     }
 
@@ -275,8 +250,8 @@ public class BCMDbAdapter implements IConstants {
      * Return a Cursor over the HR items in the database for a given start and
      * end times.
      *
-     * @param start
-     * @param end
+     * @param start The start time.
+     * @param end The end time.
      * @return Cursor over items.
      */
     public Cursor fetchAllHrDateDataForDates(long start, long end) {
@@ -284,8 +259,8 @@ public class BCMDbAdapter implements IConstants {
             return null;
         }
         return mDb.query(DB_DATA_TABLE, new String[]{COL_DATE, COL_HR},
-                COL_DATE + ">=" + Long.toString(start) + " AND " + COL_DATE
-                        + "<=" + Long.toString(end), null, null, null,
+                COL_DATE + ">=" + start + " AND " + COL_DATE
+                        + "<=" + end, null, null, null,
                 SORT_ASCENDING);
     }
 
@@ -293,8 +268,8 @@ public class BCMDbAdapter implements IConstants {
      * Return a Cursor over the HR and RR items in the database for a given
      * start and end times.
      *
-     * @param start
-     * @param end
+     * @param start The start time.
+     * @param end The end time.
      * @return Cursor over items.
      */
     public Cursor fetchAllHrRrDateDataForDates(long start, long end) {
@@ -303,8 +278,8 @@ public class BCMDbAdapter implements IConstants {
         }
         return mDb.query(DB_DATA_TABLE,
                 new String[]{COL_DATE, COL_HR, COL_RR}, COL_DATE + ">="
-                        + Long.toString(start) + " AND " + COL_DATE + "<="
-                        + Long.toString(end), null, null, null, SORT_ASCENDING);
+                        + start + " AND " + COL_DATE + "<="
+                        + end, null, null, null, SORT_ASCENDING);
     }
 
     // /////////////////////////////////////////////////////////////////////////
@@ -315,7 +290,7 @@ public class BCMDbAdapter implements IConstants {
      * Return a Cursor over the list of all items in the database for a given
      * time and later.
      *
-     * @param date
+     * @param date The time.
      * @return Cursor over items.
      */
     public Cursor fetchAllDataStartingAtDate(long date) {
@@ -324,7 +299,7 @@ public class BCMDbAdapter implements IConstants {
         }
         return mDb.query(DB_DATA_TABLE, new String[]{COL_ID, COL_DATE,
                         COL_START_DATE, COL_HR, COL_RR},
-                COL_DATE + ">=" + Long.toString(date), null, null, null,
+                COL_DATE + ">=" + date, null, null, null,
                 SORT_ASCENDING);
     }
 
@@ -332,7 +307,7 @@ public class BCMDbAdapter implements IConstants {
      * Return a Cursor over the HR and RR items in the database for a given time
      * and later.
      *
-     * @param date
+     * @param date The time.
      * @return Cursor over items.
      */
     public Cursor fetchAllHrRrDateDataStartingAtDate(long date) {
@@ -342,14 +317,13 @@ public class BCMDbAdapter implements IConstants {
         return mDb
                 .query(DB_DATA_TABLE,
                         new String[]{COL_DATE, COL_HR, COL_RR}, COL_DATE
-                                + ">=" + Long.toString(date), null, null, null,
+                                + ">=" + date, null, null, null,
                         SORT_ASCENDING);
     }
 
     /**
      * A SQLiteOpenHelper helper to help manage database creation and version
-     * management. Extends a custom version that writes to the SD Card instead
-     * of using the Context.
+     * management.
      */
     private static class DatabaseHelper extends SQLiteOpenHelper {
         private DatabaseHelper(Context context, String dir) {

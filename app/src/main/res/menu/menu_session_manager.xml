@@ -46,14 +46,19 @@
           android:checkable="false"
           android:orderInCategory="9"
           app:showAsAction="never"/>
-    <item android:id="@+id/menu_save_database"
-          android:title="@string/menu_save_database"
+    <item android:id="@+id/menu_save_database_cvs"
+          android:title="@string/menu_save_database_cvs"
           android:checkable="false"
           android:orderInCategory="10"
           app:showAsAction="never"/>
-    <item android:id="@+id/menu_restore_database"
-          android:title="@string/menu_restore_database"
-          android:checkable="false"
-          android:orderInCategory="11"
-          app:showAsAction="never"/>
+    <item android:id="@+id/menu_restore_database_cvs"
+        android:title="@string/menu_restore_database_cvs"
+        android:checkable="false"
+        android:orderInCategory="11"
+        app:showAsAction="never"/>
+    <item android:id="@+id/menu_save_database"
+        android:title="@string/menu_save_database"
+        android:checkable="false"
+        android:orderInCategory="11"
+        app:showAsAction="never"/>
 </menu>

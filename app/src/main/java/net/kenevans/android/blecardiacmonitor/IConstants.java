@@ -30,6 +30,10 @@ import java.util.UUID;
  */
 public interface IConstants {
     /**
+     * Used for
+     */
+    String MAIN_ACTIVITY = "DeviceMonitorActivity";
+    /**
      * Tag to associate with log messages.
      */
     String TAG = "BCMMonitor";
@@ -102,7 +106,6 @@ public interface IConstants {
     String SD_CARD_DB_DIRECTORY = "BLE Cardiac Monitor";
 
     // Preferences
-    String PREF_DATA_DIRECTORY = "dataDirectoryPreference";
     String PREF_MONITOR_HR = "monitorHrPreference";
     String PREF_MONITOR_CUSTOM = "monitorCustomPreference";
     String PREF_READ_BATTERY = "readBatteryPreference";
@@ -110,6 +113,7 @@ public interface IConstants {
     String PREF_PLOT_RR = "plotRrPreference";
     String PREF_PLOT_INTERVAL = "plotIntervalPreference";
     String PREF_MANUALLY_DISCONNECTED = "manuallyDisconnected";
+    String PREF_TREE_URI = "tree_uri";
 
     // Session
     int SESSION_IDLE = 0;
@@ -200,6 +204,8 @@ public interface IConstants {
     String COL_RR = "rr";
     // /** Database column for the temporary flag. */
     //  String COL_TMP = "temporary";
+
+    String saveDatabaseTemplate = "BCMDatabase.%s.db";
     /**
      * Prefix for the file name for saving the database.
      */
@@ -244,29 +250,33 @@ public interface IConstants {
 
     // Messages
     /**
+     * Request code for ACTION_OPEN_DOCUMENT_TREE.
+     */
+    int REQ_GET_TREE = 20;
+    /**
      * Request code for selecting a device.
      */
-    int REQUEST_SELECT_DEVICE_CODE = 10;
+    int REQ_SELECT_DEVICE_CODE = 10;
     /**
      * Request code for enabling Bluetooth.
      */
-    int REQUEST_ENABLE_BT_CODE = 11;
+    int REQ_ENABLE_BT_CODE = 11;
     /**
      * Request code for test.
      */
-    int REQUEST_TEST_CODE = 12;
+    int REQ_TEST_CODE = 12;
     /**
      * Request code for plotting.
      */
-    int REQUEST_PLOT_CODE = 13;
+    int REQ_PLOT_CODE = 13;
     /**
      * Request code for the session manager.
      */
-    int REQUEST_SESSION_MANAGER_CODE = 14;
+    int REQ_SESSION_MANAGER_CODE = 14;
     /**
      * Request code for settings.
      */
-    int REQUEST_SETTINGS_CODE = 15;
+    int REQ_SETTINGS_CODE = 15;
 
     // Intent codes
     /**

@@ -9,7 +9,6 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -22,6 +21,7 @@ import com.androidplot.xy.SimpleXYSeries;
 import com.androidplot.xy.StepMode;
 import com.androidplot.xy.XYGraphWidget;
 import com.androidplot.xy.XYPlot;
+import com.androidplot.xy.XYRegionFormatter;
 import com.androidplot.xy.XYSeriesFormatter;
 
 import java.io.File;
@@ -36,6 +36,7 @@ import java.util.Locale;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.PreferenceManager;
 
 /**
  * @author evans
@@ -59,8 +60,8 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
     private double RR_SCALE = .1;  // to 100 ms to use same axis
 
     private Context context;
-    private XYSeriesFormatter hrFormatter;
-    private XYSeriesFormatter rrFormatter;
+    private XYSeriesFormatter<XYRegionFormatter> hrFormatter;
+    private XYSeriesFormatter<XYRegionFormatter> rrFormatter;
     private SimpleXYSeries hrSeries;
     private SimpleXYSeries rrSeries;
 
@@ -135,23 +136,7 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
             return;
         }
 
-        // Get the database name from the default preferences
-        SharedPreferences prefs = PreferenceManager
-                .getDefaultSharedPreferences(this);
-        String prefString = prefs.getString(PREF_DATA_DIRECTORY, null);
-        if (prefString == null) {
-            Utils.errMsg(this, "Cannot find the name of the data directory");
-            return;
-        }
-
-        // Open the database
-        mDataDir = new File(prefString);
-        if (!mDataDir.exists()) {
-            Utils.errMsg(this, "Cannot find database directory: " + mDataDir);
-            mDataDir = null;
-            return;
-        }
-        mDbAdapter = new BCMDbAdapter(this, mDataDir);
+        mDbAdapter = new BCMDbAdapter(this);
         mDbAdapter.open();
 
         // Set result CANCELED in case the user backs out
@@ -235,22 +220,21 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-        switch (id) {
-            case R.id.menu_zoom_reset:
-                if (mPlot != null) {
-                    mPlot.setRangeBoundaries(50, 100,
-                            BoundaryMode.AUTO);
-                    mPlot.setDomainBoundaries(0, 24 * 3600 * 1000,
-                            BoundaryMode.AUTO);
-                    update();
-                }
-                return true;
-            case R.id.menu_refresh:
-                refresh();
-                return true;
-            case R.id.get_view_info:
-                Utils.infoMsg(this, getPlotInfo());
-                return true;
+        if (id == R.id.menu_zoom_reset) {
+            if (mPlot != null) {
+                mPlot.setRangeBoundaries(50, 100,
+                        BoundaryMode.AUTO);
+                mPlot.setDomainBoundaries(0, 24 * 3600 * 1000,
+                        BoundaryMode.AUTO);
+                update();
+            }
+            return true;
+        } else if (id == R.id.menu_refresh) {
+            refresh();
+            return true;
+        } else if (id == R.id.get_view_info) {
+            Utils.infoMsg(this, getPlotInfo());
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }

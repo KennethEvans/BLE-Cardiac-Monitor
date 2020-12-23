@@ -6,8 +6,8 @@ android {
         applicationId "net.kenevans.android.blecardiacmonitor"
         minSdkVersion 21
         targetSdkVersion 30
-        versionCode 12
-        versionName '5.2.0'
+        versionCode 13
+        versionName "5.3.0"
     }
     buildTypes {
         release {
@@ -29,5 +29,6 @@ android {
 dependencies {
     implementation "com.androidplot:androidplot-core:1.5.6"
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'androidx.preference:preference:1.1.1'
 }

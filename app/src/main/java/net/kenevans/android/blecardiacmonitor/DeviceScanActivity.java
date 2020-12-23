@@ -126,14 +126,11 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.menu_scan:
-                mLeDeviceListAdapter.clear();
-                startScan();
-                break;
-            case R.id.menu_stop:
-                endScan();
-                break;
+        if (item.getItemId() == R.id.menu_scan) {
+            mLeDeviceListAdapter.clear();
+            startScan();
+        } else if (item.getItemId() == R.id.menu_stop) {
+            endScan();
         }
         return true;
     }
@@ -149,7 +146,7 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
         if (!mBluetoothAdapter.isEnabled()) {
             Intent enableBtIntent = new Intent(
                     BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT_CODE);
+            startActivityForResult(enableBtIntent, REQ_ENABLE_BT_CODE);
         } else {
             // Initialize the list view adapter
             mLeDeviceListAdapter = new LeDeviceListAdapter();
@@ -161,18 +158,16 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[]
             permissions, @NonNull int[] grantResults) {
-        switch (requestCode) {
-            case PERMISSION_ACCESS_COARSE_LOCATION:
-                // COARSE_LOCATION
-                if (grantResults.length > 0 && grantResults[0] ==
-                        PackageManager.PERMISSION_GRANTED) {
-                    mAllowScan = true;
-                    startScan();
-                } else if (grantResults.length > 0 && grantResults[0] ==
-                        PackageManager.PERMISSION_DENIED) {
-                    mAllowScan = false;
-                }
-                break;
+        if (requestCode == PERMISSION_ACCESS_COARSE_LOCATION) {
+            // COARSE_LOCATION
+            if (grantResults.length > 0 && grantResults[0] ==
+                    PackageManager.PERMISSION_GRANTED) {
+                mAllowScan = true;
+                startScan();
+            } else if (grantResults.length > 0 && grantResults[0] ==
+                    PackageManager.PERMISSION_DENIED) {
+                mAllowScan = false;
+            }
         }
     }
 
@@ -180,7 +175,7 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
     protected void onActivityResult(int requestCode, int resultCode, Intent
             data) {
         // User chose not to enable Bluetooth.
-        if (requestCode == REQUEST_ENABLE_BT_CODE
+        if (requestCode == REQ_ENABLE_BT_CODE
                 && resultCode == Activity.RESULT_CANCELED) {
             finish();
             return;
@@ -354,13 +349,13 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
                 public void onBatchScanResults(List<ScanResult> results) {
                     Log.d(TAG, this.getClass().getSimpleName() + ": " +
                             "onBatchScanResults"
-                    + " nResults=" + results.size());
+                            + " nResults=" + results.size());
                     // Results is non-null
-                    for(ScanResult result : results) {
+                    for (ScanResult result : results) {
                         final BluetoothDevice device = result.getDevice();
                         Log.d(TAG, "    device=" + device.getName()
                                 + " " + device.getAddress());
-                                runOnUiThread(new Runnable() {
+                        runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 mLeDeviceListAdapter.addDevice(device);

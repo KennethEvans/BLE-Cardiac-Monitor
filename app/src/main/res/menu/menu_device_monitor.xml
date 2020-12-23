@@ -26,8 +26,14 @@
           android:title="@string/menu_read_battery_level"
           android:orderInCategory="4"
           app:showAsAction="never"/>
+    <item android:id="@+id/info"
+        android:orderInCategory="5"
+        android:title="@string/info_item" />
+    <item android:id="@+id/choose_data_directory"
+        android:orderInCategory="5"
+        android:title="@string/choose_data_directory_item" />
     <item android:id="@+id/help"
-          android:orderInCategory="5"
+          android:orderInCategory="6"
           android:title="@string/help_item" />
     <item android:id="@+id/menu_settings"
           android:title="@string/menu_settings"

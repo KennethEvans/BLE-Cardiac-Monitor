@@ -78,10 +78,13 @@
     <string name="menu_check_all">Check All</string>
     <string name="menu_check_none">Check None</string>
     <string name="menu_save_database">Save Database</string>
-    <string name="menu_restore_database">Restore Database</string>
+    <string name="menu_save_database_cvs">Save Database as CVS</string>
+    <string name="menu_restore_database_cvs">Restore Database from CVS</string>
     <string name="menu_restoring">Restoring</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_read_battery_level">Get Battery level</string>
+    <string name="info_item">Info</string>
+    <string name="choose_data_directory_item">Choose Data Directory</string>
 
     <!-- Preferences -->
     <string name="monitor_preferences">Monitor Settings</string>
