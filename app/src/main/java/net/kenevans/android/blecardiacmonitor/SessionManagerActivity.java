@@ -139,7 +139,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
             saveDatabaseAsCsv();
             return true;
         } else if (item.getItemId() == R.id.menu_restore_database_cvs) {
-            checkRestoreDatabaseFrnomCvs();
+            checkRestoreDatabaseFromCvs();
             return true;
         } else if (item.getItemId() == R.id.menu_save_database) {
             saveDatabase();
@@ -545,6 +545,9 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         refresh();
     }
 
+    /**
+     * Saves the database as a CSV file with a .txt extension.
+     */
     private void saveDatabase() {
         SharedPreferences prefs = getSharedPreferences(MAIN_ACTIVITY,
                 MODE_PRIVATE);
@@ -713,7 +716,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
      * delete the current data, and call restoreData to actually do the delete
      * and restore.
      */
-    private void checkRestoreDatabaseFrnomCvs() {
+    private void checkRestoreDatabaseFromCvs() {
         // Get the saved tree Uri
         SharedPreferences prefs = getSharedPreferences(MAIN_ACTIVITY,
                 MODE_PRIVATE);
@@ -874,8 +877,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
 
     /**
      * Class to handle getting the bitmap from the web using a progress
-     * bar that
-     * can be cancelled.<br>
+     * bar that can be cancelled.<br>
      * <br>
      * Call with <b>Bitmap bitmap = new MyUpdateTask().execute(String)<b>
      */
@@ -1145,8 +1147,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
             ViewHolder viewHolder;
             // General ListView optimization code.
             if (view == null) {
-                view = mInflator.inflate(R.layout.listitem_session,
-                        viewGroup,
+                view = mInflator.inflate(R.layout.listitem_session, viewGroup,
                         false);
                 viewHolder = new ViewHolder();
                 viewHolder.sessionCheckbox = view
@@ -1186,8 +1187,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
                 double duration = session.getDuration();
                 int durationDays = (int) (duration / (3600000. * 24));
 
-                int durationHours =
-                        (int) (duration / 3600000.) - durationDays;
+                int durationHours = (int) (duration / 3600000.) - durationDays;
                 int durationMin = (int) (duration / 60000.) - durationHours
                         * 60;
                 int durationSec = (int) (duration / 1000.) - durationHours

@@ -78,13 +78,12 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
                     // start-up
                     // initialization.
                     SharedPreferences prefs = PreferenceManager
-                            .getDefaultSharedPreferences
-                                    (DeviceMonitorActivity.this);
+                            .getDefaultSharedPreferences(DeviceMonitorActivity.this);
                     boolean manuallyDisconnected = prefs.getBoolean(
                             PREF_MANUALLY_DISCONNECTED, false);
                     if (!manuallyDisconnected) {
-                        boolean res = mBLECardiacBleService.connect
-                                (mDeviceAddress);
+                        boolean res =
+                                mBLECardiacBleService.connect(mDeviceAddress);
                         Log.d(TAG, "Connect mBLECardiacBleService result=" +
                                 res);
                         if (res) {
@@ -111,38 +110,36 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
      * ACTION_DATA_AVAILABLE: received data from the device. This can be a
      * result of read or notification operations.<br>
      */
-    private final BroadcastReceiver mGattUpdateReceiver = new
-            BroadcastReceiver() {
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    final String action = intent.getAction();
-                    if (BCMBleService.ACTION_GATT_CONNECTED.equals(action)) {
-                        Log.d(TAG, "onReceive: " + action);
-                        mConnected = true;
-                        updateConnectionState(R.string.connected);
-                        invalidateOptionsMenu();
-                    } else if (BCMBleService.ACTION_GATT_DISCONNECTED.equals
-                            (action)) {
-                        Log.d(TAG, "onReceive: " + action);
-                        mConnected = false;
-                        resetDataViews();
-                        updateConnectionState(R.string.disconnected);
-                        invalidateOptionsMenu();
-                    } else if (BCMBleService.ACTION_GATT_SERVICES_DISCOVERED
-                            .equals(action)) {
-                        Log.d(TAG, "onReceive: " + action);
-                        onServicesDiscovered(mBLECardiacBleService
-                                .getSupportedGattServices());
-                    } else if (BCMBleService.ACTION_DATA_AVAILABLE.equals
-                            (action)) {
-                        // Log.d(TAG, "onReceive: " + action);
-                        displayData(intent);
-                    } else if (BCMBleService.ACTION_ERROR.equals(action)) {
-                        // Log.d(TAG, "onReceive: " + action);
-                        displayError(intent);
-                    }
-                }
-            };
+    private final BroadcastReceiver mGattUpdateReceiver =
+            new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+            if (BCMBleService.ACTION_GATT_CONNECTED.equals(action)) {
+                Log.d(TAG, "onReceive: " + action);
+                mConnected = true;
+                updateConnectionState(R.string.connected);
+                invalidateOptionsMenu();
+            } else if (BCMBleService.ACTION_GATT_DISCONNECTED.equals
+                    (action)) {
+                Log.d(TAG, "onReceive: " + action);
+                mConnected = false;
+                resetDataViews();
+                updateConnectionState(R.string.disconnected);
+                invalidateOptionsMenu();
+            } else if (BCMBleService.ACTION_GATT_SERVICES_DISCOVERED
+                    .equals(action)) {
+                Log.d(TAG, "onReceive: " + action);
+                onServicesDiscovered(mBLECardiacBleService.getSupportedGattServices());
+            } else if (BCMBleService.ACTION_DATA_AVAILABLE.equals(action)) {
+                // Log.d(TAG, "onReceive: " + action);
+                displayData(intent);
+            } else if (BCMBleService.ACTION_ERROR.equals(action)) {
+                // Log.d(TAG, "onReceive: " + action);
+                displayError(intent);
+            }
+        }
+    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -567,10 +564,10 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
      *
      * @param b The value for PREF_MANUALLY_DISCONNECTED.
      */
-    private void setManuallyDisconnected(boolean b) {
+    private void setManuallyDisconnected(boolean state) {
         SharedPreferences.Editor editor = PreferenceManager
                 .getDefaultSharedPreferences(this).edit();
-        editor.putBoolean(PREF_MANUALLY_DISCONNECTED, b);
+        editor.putBoolean(PREF_MANUALLY_DISCONNECTED, state);
         editor.apply();
     }
 

@@ -111,6 +111,8 @@ public interface IConstants {
     String PREF_READ_BATTERY = "readBatteryPreference";
     String PREF_PLOT_HR = "plotHrPreference";
     String PREF_PLOT_RR = "plotRrPreference";
+    String PREF_PLOT_ACT = "plotActPreference";
+    String PREF_PLOT_PA = "plotPaPreference";
     String PREF_PLOT_INTERVAL = "plotIntervalPreference";
     String PREF_MANUALLY_DISCONNECTED = "manuallyDisconnected";
     String PREF_TREE_URI = "tree_uri";
@@ -205,7 +207,7 @@ public interface IConstants {
     // /** Database column for the temporary flag. */
     //  String COL_TMP = "temporary";
 
-    String saveDatabaseTemplate = "BCMDatabase.%s.db";
+    String saveDatabaseTemplate = "BCMMonitor.%s.db";
     /**
      * Prefix for the file name for saving the database.
      */
