@@ -31,7 +31,7 @@ public class HeartRateValues implements IConstants {
         hr = characteristic.getIntValue(format, 1);
         string += "Heart Rate: " + hr;
         // Sensor Contact
-        sensorContact = (flag >> 1) & 0x11;
+        sensorContact = (flag >> 1) & 0x3;
         switch (sensorContact) {
             case 0:
             case 1:
