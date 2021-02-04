@@ -331,7 +331,7 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
                 Utils.errMsg(this, "Failed to get presistent access " +
                         "permissions");
             }
-        } else if (requestCode == resultCode && resultCode == RESULT_OK) {
+        } else if (requestCode == REQ_SELECT_DEVICE_CODE && resultCode == RESULT_OK) {
             mDeviceName = intent.getStringExtra(DEVICE_NAME_CODE);
             mDeviceAddress = intent.getStringExtra(DEVICE_ADDRESS_CODE);
             // Use this instead of getPreferences to be application-wide
@@ -562,7 +562,7 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
      * Sets the PREF_MANUALLY_DISCONNECTED preference in PreferenceManager
      * .getDefaultSharedPreferences.
      *
-     * @param b The value for PREF_MANUALLY_DISCONNECTED.
+     * @param state The value for PREF_MANUALLY_DISCONNECTED.
      */
     private void setManuallyDisconnected(boolean state) {
         SharedPreferences.Editor editor = PreferenceManager

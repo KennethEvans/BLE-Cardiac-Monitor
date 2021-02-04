@@ -6,8 +6,8 @@ android {
         applicationId "net.kenevans.android.blecardiacmonitor"
         minSdkVersion 21
         targetSdkVersion 30
-        versionCode 13
-        versionName "5.3.0"
+        versionCode 14
+        versionName "5.3.1"
     }
     buildTypes {
         release {
