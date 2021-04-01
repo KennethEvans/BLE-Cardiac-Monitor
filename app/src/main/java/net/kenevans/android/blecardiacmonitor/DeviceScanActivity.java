@@ -77,6 +77,12 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
             finish();
         }
 
+        /// Seems to be necessary
+        ActivityCompat.requestPermissions(this, new String[]
+                {
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                }, 0);
+
         // Initializes a Bluetooth adapter. For API level 18 and above, get a
         // reference to BluetoothAdapter through BluetoothManager.
         mBluetoothAdapter = null;
