@@ -23,12 +23,15 @@ package net.kenevans.android.blecardiacmonitor;
 
 import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
+import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.util.Log;
+import android.view.ContextThemeWrapper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
+import java.util.Map;
 
 public class Utils implements IConstants {
     /**
@@ -39,18 +42,14 @@ public class Utils implements IConstants {
      * @param msg     The dialog message.
      */
     @SuppressWarnings("unused")
-    public static void alert(Context context, String title, String msg) {
+    private static void alert(Context context, String title, String msg) {
         try {
-            AlertDialog alertDialog = new AlertDialog.Builder(context)
-                    .setTitle(title)
-                    .setMessage(msg)
-                    .setPositiveButton(context.getText(R.string.ok),
-                            new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog,
-                                                    int which) {
-                                    dialog.cancel();
-                                }
-                            }).create();
+            AlertDialog alertDialog =
+                    new AlertDialog.Builder(context)
+                            .setTitle(title)
+                            .setMessage(msg)
+                            .setPositiveButton(context.getText(R.string.ok),
+                                    (dialog, which) -> dialog.cancel()).create();
             alertDialog.show();
         } catch (Throwable t) {
             Log.e(getContextTag(context), "Error using " + title
@@ -65,7 +64,7 @@ public class Utils implements IConstants {
      * @param msg     The dialog message.
      */
     @SuppressWarnings("unused")
-    public static void errMsg(Context context, String msg) {
+    static void errMsg(Context context, String msg) {
         Log.e(TAG, getContextTag(context) + msg);
         alert(context, context.getText(R.string.error).toString(), msg);
     }
@@ -89,7 +88,7 @@ public class Utils implements IConstants {
      * @param msg     The dialog message.
      */
     @SuppressWarnings("unused")
-    public static void infoMsg(Context context, String msg) {
+    static void infoMsg(Context context, String msg) {
         Log.i(TAG, getContextTag(context) + msg);
         alert(context, context.getText(R.string.info).toString(), msg);
     }
@@ -103,9 +102,9 @@ public class Utils implements IConstants {
      * @param t       The throwable.
      */
     @SuppressWarnings("unused")
-    public static void excMsg(Context context, String msg, Throwable t) {
+    static void excMsg(Context context, String msg, Throwable t) {
         String fullMsg = msg += "\n"
-                + context.getText(R.string.exception).toString() + ": " + t
+                + context.getText(R.string.exception) + ": " + t
                 + "\n" + t.getMessage();
         Log.e(TAG, getContextTag(context) + msg);
         alert(context, context.getText(R.string.exception).toString(), fullMsg);
@@ -119,7 +118,7 @@ public class Utils implements IConstants {
      * @return The context tag.
      */
     @SuppressWarnings("unused")
-    public static String getContextTag(Context context) {
+    private static String getContextTag(Context context) {
         if (context == null) {
             return "<???>: ";
         }
@@ -127,7 +126,7 @@ public class Utils implements IConstants {
     }
 
     /**
-     * Get the stack trace for a throwble as a String.
+     * Get the stack trace for a throwable as a String.
      *
      * @param t The throwable.
      * @return The stack trace as a String.
@@ -158,4 +157,70 @@ public class Utils implements IConstants {
         return ext;
     }
 
+    /**
+     * Utility method for printing a hash code in hex.
+     *
+     * @param obj The object whose hash code is desired.
+     * @return The hex-formatted hash code.
+     */
+    @SuppressWarnings("unused")
+    public static String getHashCode(Object obj) {
+        if(obj == null) {
+            return "null";
+        }
+        return String.format("%08X", obj.hashCode());
+    }
+
+    /**
+     * Get the version name for the application with the specified context.
+     *
+     * @param ctx The context.
+     * @return The package name.
+     */
+    public static String getVersion(Context ctx) {
+        String versionName = "NA";
+        try {
+            versionName = ctx.getPackageManager()
+                    .getPackageInfo(ctx.getPackageName(), 0).versionName;
+        } catch (Exception ex) {
+            // Do nothing
+        }
+        return versionName;
+    }
+
+    /**
+     * Get the orientation of the device.
+     *
+     * @param ctx The Context.
+     * @return Either "Portrait" or "Landscape".
+     */
+    public static String getOrientation(Context ctx) {
+        int orientation = ctx.getResources().getConfiguration().orientation;
+        if (orientation == Configuration.ORIENTATION_PORTRAIT) {
+            return "Portrait";
+        } else {
+            return "Landscape";
+        }
+    }
+
+    /**
+     * Utility method to get an info string listing all the keys,value pairs
+     * in the given SharedPreferences.
+     *
+     * @param prefix String with text to prepend to each line, e.g. "    ".
+     * @param prefs  The given Preferences.
+     * @return The info/
+     */
+    public static String getSharedPreferencesInfo(String prefix,
+                                                  SharedPreferences prefs) {
+        Map<String, ?> map = prefs.getAll();
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, ?> entry : map.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+            sb.append(prefix).append("key=").append(key)
+                    .append(" value=").append(value).append("\n");
+        }
+        return sb.toString();
+    }
 }

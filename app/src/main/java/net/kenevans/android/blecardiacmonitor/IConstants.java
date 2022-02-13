@@ -37,10 +37,10 @@ public interface IConstants {
      * Tag to associate with log messages.
      */
     String TAG = "BCMMonitor";
-    /**
-     * Name of the package for this application.
-     */
-    String PACKAGE_NAME = "net.kenevans.android.blecardiacmonitor";
+        /**
+         * Name of the package for this application.
+         */
+        String PACKAGE_NAME = "net.kenevans.android.blecardiacmonitor";
     /**
      * Prefix for session names. Will be followed by a date and time.
      */
@@ -250,11 +250,27 @@ public interface IConstants {
      */
     long DEVICE_SCAN_PERIOD = 10000;
 
-    // Messages
+    // Request codes
     /**
-     * Request code for ACTION_OPEN_DOCUMENT_TREE.
+     * Code for requesting all needed permissions for DeviceScanActivity.
      */
-    int REQ_GET_TREE = 20;
+    int REQ_DEVICE_SCAN_MULTIPLE = 0;
+    /**
+     * Request code for ACCESS_COARSE_LOCATION permission.
+     */
+    int REQ_ACCESS_COARSE_LOCATION = 1;
+    /**
+     * Request code for ACCESS_FINE_LOCATION permission.
+     */
+    int REQ_ACCESS_FINE_LOCATION = 2;
+    /**
+     * Request code for BLUETOOTH_CONNECT permission.
+     */
+    int REQ_ACCESS_BLUETOOTH_CONNECT = 3;
+    /**
+     * Request code for BLUETOOTH_SCAN permission.
+     */
+    int REQ_ACCESS_BLUETOOTH_SCAN = 4;
     /**
      * Request code for selecting a device.
      */
@@ -279,6 +295,10 @@ public interface IConstants {
      * Request code for settings.
      */
     int REQ_SETTINGS_CODE = 15;
+    /**
+     * Request code for ACTION_OPEN_DOCUMENT_TREE.
+     */
+    int REQ_GET_TREE = 20;
 
     // Intent codes
     /**
@@ -347,12 +367,6 @@ public interface IConstants {
      * Result code for an error.
      */
     int RESULT_ERROR = 1001;
-
-    /**
-     * Code for requesting ACCESS_COARSE_LOCATION permission.
-     */
-    int PERMISSION_ACCESS_COARSE_LOCATION = 1;
-
 
     // Plotting
     /**

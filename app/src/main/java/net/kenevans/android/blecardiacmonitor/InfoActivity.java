@@ -41,7 +41,7 @@ public class InfoActivity extends Activity implements IConstants {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.info);
 
-        mWebView = (WebView) findViewById(R.id.webview);
+        mWebView = findViewById(R.id.webview);
         // mWebView.getSettings().setJavaScriptEnabled(true);
         // mWebView.setWebViewClient(new LocalWebViewClient());
 
@@ -53,7 +53,11 @@ public class InfoActivity extends Activity implements IConstants {
             Toast.makeText(this, R.string.help_url_not_found,
                     Toast.LENGTH_LONG).show();
         }
-        mWebView.loadUrl(url);
+        if(url != null) {
+            mWebView.loadUrl(url);
+        } else {
+            Utils.errMsg(this, "failed to load help");
+        }
     }
 
     @Override

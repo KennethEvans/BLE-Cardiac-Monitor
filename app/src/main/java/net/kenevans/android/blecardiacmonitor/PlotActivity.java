@@ -57,9 +57,8 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
     private long mLastRrUpdateTime = INVALID_DATE;
     private long mLastRrTime = INVALID_DATE;
 
-    private double RR_SCALE = .1;  // to 100 ms to use same axis
+    private final double RR_SCALE = .1;  // to 100 ms to use same axis
 
-    private Context context;
     private XYSeriesFormatter<XYRegionFormatter> hrFormatter;
     private XYSeriesFormatter<XYRegionFormatter> rrFormatter;
     private SimpleXYSeries hrSeries;
@@ -222,8 +221,7 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
         int id = item.getItemId();
         if (id == R.id.menu_zoom_reset) {
             if (mPlot != null) {
-                mPlot.setRangeBoundaries(50, 100,
-                        BoundaryMode.AUTO);
+                mPlot.setRangeBoundaries(50, 100, BoundaryMode.AUTO);
                 mPlot.setDomainBoundaries(0, 24 * 3600 * 1000,
                         BoundaryMode.AUTO);
                 update();
@@ -291,10 +289,8 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
                 null, null, null);
         rrFormatter.setLegendIconEnabled(false);
 
-        mPlot.setRangeBoundaries(50, 100,
-                BoundaryMode.AUTO);
-        mPlot.setDomainBoundaries(0, 360000,
-                BoundaryMode.AUTO);
+        mPlot.setRangeBoundaries(50, 100, BoundaryMode.AUTO);
+        mPlot.setDomainBoundaries(0, 360000, BoundaryMode.AUTO);
         // Range labels will increment by 10
         mPlot.setRangeStep(StepMode.INCREMENT_BY_VAL, 10);
 //        mPlot.setDomainStep(StepMode.INCREMENT_BY_VAL, 60000); // 1 min
@@ -564,7 +560,7 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
         sb.append("Range Origin=").append(mPlot.getRangeOrigin()).append(LF);
         long timeVal = mPlot.getDomainOrigin().longValue();
         Date date = new Date(timeVal);
-        sb.append("Domain Origin=").append(date.toString()).append(LF);
+        sb.append("Domain Origin=").append(date).append(LF);
         sb.append("Range Step Value=").append(mPlot.getRangeStepValue()).append(LF);
         sb.append("Domain Step Value=").append(mPlot.getDomainStepValue()).append(LF);
         sb.append("Graph Width=").append(mPlot.getGraph().getSize().getWidth().getValue()).append(LF);
@@ -587,11 +583,6 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
     }
 
     public void update() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mPlot.redraw();
-            }
-        });
+        runOnUiThread(() -> mPlot.redraw());
     }
 }

@@ -173,7 +173,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         intent.putExtra(PLOT_SESSION_START_TIME_CODE, startDate);
         // // This is not currently used
         // intent.putExtra(PLOT_SESSION_END_TIME_CODE, endDate);
-        startActivityForResult(intent, REQ_PLOT_CODE);
+        startActivity(intent);
     }
 
     /**
@@ -283,12 +283,8 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         Uri treeUri = Uri.parse(treeUriStr);
         String treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri);
         // Need to sort in order of increasing startTime
-        Collections.sort(checkedSessions, new Comparator<Session>() {
-            @Override
-            public int compare(Session lhs, Session rhs) {
-                return Long.compare(lhs.getStartDate(), rhs.getStartDate());
-            }
-        });
+        Collections.sort(checkedSessions, (lhs, rhs) ->
+                Long.compare(lhs.getStartDate(), rhs.getStartDate()));
         int nErrors = 0;
         int nWriteErrors;
         String errMsg = "Error saving combined sessions:\n";
@@ -517,13 +513,9 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
                 .setTitle(R.string.confirm)
                 .setMessage(msg)
                 .setPositiveButton(R.string.ok,
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog,
-                                                int which) {
-                                dialog.dismiss();
-                                doDiscardSession();
-                            }
+                        (dialog, which) -> {
+                            dialog.dismiss();
+                            doDiscardSession();
                         }).setNegativeButton(R.string.cancel, null).show();
     }
 
@@ -559,7 +551,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         FileInputStream inputStream = null;
         OutputStream outputStream = null;
         try {
-            String format = "yyyy-MM-dd-HHmmss";
+            String format = "yyyy-MM-dd_HH:mm:ss";
             SimpleDateFormat df = new SimpleDateFormat(format, Locale.US);
             Date now = new Date();
             String fileName = String.format(saveDatabaseTemplate,
@@ -626,7 +618,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
             return;
         }
         // Determine the filename
-        String format = "yyyy-MM-dd-HHmmss";
+        String format = "yyyy-MM-dd_HH:mm:ss";
         SimpleDateFormat df = new SimpleDateFormat(format, Locale.US);
         Date now = new Date();
         String fileName = String.format(SAVE_DATABASE_FILENAME_TEMPLATE,
@@ -741,11 +733,8 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
 
         // Sort them by date with newest first
         final int len = uriList.size();
-        Collections.sort(uriList, new Comparator<UriData>() {
-            public int compare(UriData data1, UriData data2) {
-                return Long.compare(data2.lastModified, data1.lastModified);
-            }
-        });
+        Collections.sort(uriList, (data1, data2) ->
+                Long.compare(data2.lastModified, data1.lastModified));
 
         // Prompt for the file to use
         final CharSequence[] items = new CharSequence[uriList.size()];
@@ -755,34 +744,25 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(getText(R.string.select_restore_file));
         builder.setSingleChoiceItems(items, 0,
-                new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, final int
-                            item) {
-                        dialog.dismiss();
-                        if (item < 0 || item >= len) {
-                            Utils.errMsg(SessionManagerActivity.this,
-                                    "Invalid item");
-                            return;
-                        }
-                        // Confirm the user wants to delete all the current data
-                        new AlertDialog.Builder(SessionManagerActivity.this)
-                                .setIcon(android.R.drawable.ic_dialog_alert)
-                                .setTitle(R.string.confirm)
-                                .setMessage(R.string.delete_prompt)
-                                .setPositiveButton(R.string.ok,
-                                        new DialogInterface.OnClickListener() {
-                                            @Override
-                                            public void onClick(
-                                                    DialogInterface dialog,
-                                                    int which) {
-                                                dialog.dismiss();
-                                                restoreDatabaseFromCvs(uriList.get(item).uri);
-                                            }
-
-                                        })
-                                .setNegativeButton(R.string.cancel, null)
-                                .show();
+                (dialog, item) -> {
+                    dialog.dismiss();
+                    if (item < 0 || item >= len) {
+                        Utils.errMsg(SessionManagerActivity.this,
+                                "Invalid item");
+                        return;
                     }
+                    // Confirm the user wants to delete all the current data
+                    new AlertDialog.Builder(SessionManagerActivity.this)
+                            .setIcon(android.R.drawable.ic_dialog_alert)
+                            .setTitle(R.string.confirm)
+                            .setMessage(R.string.delete_prompt)
+                            .setPositiveButton(R.string.ok,
+                                    (dialog1, which) -> {
+                                        dialog1.dismiss();
+                                        restoreDatabaseFromCvs(uriList.get(item).uri);
+                                    })
+                            .setNegativeButton(R.string.cancel, null)
+                            .show();
                 });
         AlertDialog alert = builder.create();
         alert.show();
@@ -1159,19 +1139,16 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
                 view.setTag(viewHolder);
 
                 viewHolder.sessionCheckbox
-                        .setOnClickListener(new OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                CheckBox cb = (CheckBox) v;
-                                Session session = (Session) cb.getTag();
-                                boolean checked = cb.isChecked();
-                                session.setChecked(checked);
-                                // // DEBUG
-                                // Log.d(TAG,
-                                // "sessionCheckbox.onClickListener: "
-                                // + session.getName() + " "
-                                // + session.isChecked());
-                            }
+                        .setOnClickListener(v -> {
+                            CheckBox cb = (CheckBox) v;
+                            Session session = (Session) cb.getTag();
+                            boolean checked = cb.isChecked();
+                            session.setChecked(checked);
+                            // // DEBUG
+                            // Log.d(TAG,
+                            // "sessionCheckbox.onClickListener: "
+                            // + session.getName() + " "
+                            // + session.isChecked());
                         });
             } else {
                 viewHolder = (ViewHolder) view.getTag();

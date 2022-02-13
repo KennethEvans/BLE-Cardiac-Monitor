@@ -9,7 +9,6 @@ import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
@@ -28,6 +27,8 @@ import android.widget.Toast;
 import java.util.List;
 import java.util.UUID;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
@@ -51,6 +52,81 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
     private BCMDbAdapter mDbAdapter;
     private BluetoothGattCharacteristic mCharBat;
     private BluetoothGattCharacteristic mCharHr;
+
+    // Launcher for PREF_TREE_URI
+    private final ActivityResultLauncher<Intent> openDocumentTreeLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        Log.d(TAG, "openDocumentTreeLauncher: result" +
+                                ".getResultCode()=" + result.getResultCode());
+                        // Find the UID for this application
+                        Log.d(TAG, "URI=" + UriUtils.getApplicationUid(this));
+                        Log.d(TAG,
+                                "Current permissions (initial): "
+                                        + UriUtils.getNPersistedPermissions(this));
+                        try {
+                            if (result.getResultCode() == RESULT_OK) {
+                                // Get Uri from Storage Access Framework.
+                                Uri treeUri = result.getData().getData();
+                                SharedPreferences.Editor editor =
+                                        getPreferences(MODE_PRIVATE)
+                                                .edit();
+                                if (treeUri == null) {
+                                    editor.putString(PREF_TREE_URI, null);
+                                    editor.apply();
+                                    Utils.errMsg(this, "Failed to get " +
+                                            "persistent " +
+                                            "access permissions");
+                                    return;
+                                }
+                                // Persist access permissions.
+                                try {
+                                    this.getContentResolver().takePersistableUriPermission(treeUri,
+                                            Intent.FLAG_GRANT_READ_URI_PERMISSION |
+                                                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                                    // Save the current treeUri as PREF_TREE_URI
+                                    editor.putString(PREF_TREE_URI,
+                                            treeUri.toString());
+                                    editor.apply();
+                                    // Trim the persisted permissions
+                                    UriUtils.trimPermissions(this, 1);
+                                } catch (Exception ex) {
+                                    String msg = "Failed to " +
+                                            "takePersistableUriPermission for "
+                                            + treeUri.getPath();
+                                    Utils.excMsg(this, msg, ex);
+                                }
+                                Log.d(TAG,
+                                        "Current permissions (final): "
+                                                + UriUtils.getNPersistedPermissions(this));
+                            }
+                        } catch (Exception ex) {
+                            Log.e(TAG, "Error in openDocumentTreeLauncher: " +
+                                    "startActivity for result", ex);
+                        }
+                    });
+
+    // Launcher for select device
+    private final ActivityResultLauncher<Intent> selectDeviceLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        Intent intent = result.getData();
+                        if(intent == null) return;
+                        mDeviceName = intent.getStringExtra(DEVICE_NAME_CODE);
+                        mDeviceAddress = intent.getStringExtra(DEVICE_ADDRESS_CODE);
+                        // Use this instead of getPreferences to be application-wide
+                        SharedPreferences.Editor editor = PreferenceManager
+                                .getDefaultSharedPreferences(this).edit();
+                        editor.putString(DEVICE_NAME_CODE, mDeviceName);
+                        editor.putString(DEVICE_ADDRESS_CODE, mDeviceAddress);
+                        editor.apply();
+                        ((TextView) findViewById(R.id.device_name))
+                                .setText(mDeviceName);
+                        ((TextView) findViewById(R.id.device_address))
+                                .setText(mDeviceAddress);
+                    });
 
     /**
      * Manages the service lifecycle.
@@ -112,34 +188,34 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
      */
     private final BroadcastReceiver mGattUpdateReceiver =
             new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            final String action = intent.getAction();
-            if (BCMBleService.ACTION_GATT_CONNECTED.equals(action)) {
-                Log.d(TAG, "onReceive: " + action);
-                mConnected = true;
-                updateConnectionState(R.string.connected);
-                invalidateOptionsMenu();
-            } else if (BCMBleService.ACTION_GATT_DISCONNECTED.equals
-                    (action)) {
-                Log.d(TAG, "onReceive: " + action);
-                mConnected = false;
-                resetDataViews();
-                updateConnectionState(R.string.disconnected);
-                invalidateOptionsMenu();
-            } else if (BCMBleService.ACTION_GATT_SERVICES_DISCOVERED
-                    .equals(action)) {
-                Log.d(TAG, "onReceive: " + action);
-                onServicesDiscovered(mBLECardiacBleService.getSupportedGattServices());
-            } else if (BCMBleService.ACTION_DATA_AVAILABLE.equals(action)) {
-                // Log.d(TAG, "onReceive: " + action);
-                displayData(intent);
-            } else if (BCMBleService.ACTION_ERROR.equals(action)) {
-                // Log.d(TAG, "onReceive: " + action);
-                displayError(intent);
-            }
-        }
-    };
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    final String action = intent.getAction();
+                    if (BCMBleService.ACTION_GATT_CONNECTED.equals(action)) {
+                        Log.d(TAG, "onReceive: " + action);
+                        mConnected = true;
+                        updateConnectionState(R.string.connected);
+                        invalidateOptionsMenu();
+                    } else if (BCMBleService.ACTION_GATT_DISCONNECTED.equals
+                            (action)) {
+                        Log.d(TAG, "onReceive: " + action);
+                        mConnected = false;
+                        resetDataViews();
+                        updateConnectionState(R.string.disconnected);
+                        invalidateOptionsMenu();
+                    } else if (BCMBleService.ACTION_GATT_SERVICES_DISCOVERED
+                            .equals(action)) {
+                        Log.d(TAG, "onReceive: " + action);
+                        onServicesDiscovered(mBLECardiacBleService.getSupportedGattServices());
+                    } else if (BCMBleService.ACTION_DATA_AVAILABLE.equals(action)) {
+                        // Log.d(TAG, "onReceive: " + action);
+                        displayData(intent);
+                    } else if (BCMBleService.ACTION_ERROR.equals(action)) {
+                        // Log.d(TAG, "onReceive: " + action);
+                        displayError(intent);
+                    }
+                }
+            };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -209,7 +285,7 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
     protected void onResume() {
         Log.d(TAG, this.getClass().getSimpleName() + ": onResume: mConnected="
                 + mConnected + " mBLECardiacBleService="
-                + (mBLECardiacBleService == null ? "null" : "not null"));
+                + Utils.getHashCode(mBLECardiacBleService));
         super.onResume();
         // Get the settings
         SharedPreferences prefs = PreferenceManager
@@ -302,60 +378,6 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent
-            intent) {
-        if (requestCode == REQ_GET_TREE && resultCode == RESULT_OK) {
-            Uri treeUri;
-            // Get Uri from Storage Access Framework.
-            treeUri = intent.getData();
-            // Keep them from accumulating
-            UriUtils.releaseAllPermissions(this);
-            SharedPreferences.Editor editor = getPreferences(MODE_PRIVATE)
-                    .edit();
-            if (treeUri != null) {
-                editor.putString(PREF_TREE_URI, treeUri.toString());
-            } else {
-                editor.putString(PREF_TREE_URI, null);
-            }
-            editor.apply();
-
-            // Persist access permissions.
-            final int takeFlags = intent.getFlags()
-                    & (Intent.FLAG_GRANT_READ_URI_PERMISSION |
-                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-            if (treeUri != null) {
-                this.getContentResolver().takePersistableUriPermission(treeUri,
-                        takeFlags);
-            } else {
-                Utils.errMsg(this, "Failed to get presistent access " +
-                        "permissions");
-            }
-        } else if (requestCode == REQ_SELECT_DEVICE_CODE && resultCode == RESULT_OK) {
-            mDeviceName = intent.getStringExtra(DEVICE_NAME_CODE);
-            mDeviceAddress = intent.getStringExtra(DEVICE_ADDRESS_CODE);
-            // Use this instead of getPreferences to be application-wide
-            SharedPreferences.Editor editor = PreferenceManager
-                    .getDefaultSharedPreferences(this).edit();
-            editor.putString(DEVICE_NAME_CODE, mDeviceName);
-            editor.putString(DEVICE_ADDRESS_CODE, mDeviceAddress);
-            editor.apply();
-            ((TextView) findViewById(R.id.device_name))
-                    .setText(mDeviceName);
-            ((TextView) findViewById(R.id.device_address))
-                    .setText(mDeviceAddress);
-        } else if (requestCode == REQ_SETTINGS_CODE && resultCode == RESULT_OK) {
-            Log.d(TAG, "onActivityResult: REQUEST_SETTINGS_CODE resultCode="
-                    + resultCode);
-            // resetDataViews();
-            // if (mBLECardiacBleService != null &&
-            // mBLECardiacBleService.getSessionInProgress()) {
-            // setEnabledFlags();
-            // }
-        }
-        super.onActivityResult(requestCode, resultCode, intent);
-    }
-
     /**
      * Sets the current data directory
      */
@@ -363,8 +385,7 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION &
                 Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-//        intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, uriToLoad);
-        startActivityForResult(intent, REQ_GET_TREE);
+        openDocumentTreeLauncher.launch(intent);
     }
 
     /**
@@ -373,12 +394,7 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
      * @param resourceId The resource ID.
      */
     private void updateConnectionState(final int resourceId) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mConnectionState.setText(resourceId);
-            }
-        });
+        runOnUiThread(() -> mConnectionState.setText(resourceId));
     }
 
     /**
@@ -394,22 +410,16 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
                     .setTitle(R.string.confirm)
                     .setMessage(R.string.scan_prompt)
                     .setPositiveButton(R.string.ok,
-                            new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog,
-                                                    int which) {
-                                    Intent intent = new Intent(
-                                            DeviceMonitorActivity.this,
-                                            DeviceScanActivity.class);
-                                    startActivityForResult(intent,
-                                            REQ_SELECT_DEVICE_CODE);
-                                }
-
+                            (dialog, which) -> {
+                                Intent intent = new Intent(
+                                        DeviceMonitorActivity.this,
+                                        DeviceScanActivity.class);
+                                startActivity(intent);
                             }).setNegativeButton(R.string.cancel, null).show();
         } else {
             Intent intent = new Intent(DeviceMonitorActivity.this,
                     DeviceScanActivity.class);
-            startActivityForResult(intent, REQ_SELECT_DEVICE_CODE);
+            selectDeviceLauncher.launch(intent);
         }
     }
 
@@ -427,7 +437,7 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
                 PlotActivity.class);
         // Plot the current data, not a session
         intent.putExtra(PLOT_SESSION_CODE, false);
-        startActivityForResult(intent, REQ_PLOT_CODE);
+        startActivity(intent);
     }
 
     /**
@@ -500,7 +510,7 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
         Intent intent = new Intent(DeviceMonitorActivity.this,
                 SettingsActivity.class);
         intent.putExtra(SETTINGS_CODE, false);
-        startActivityForResult(intent, REQ_SETTINGS_CODE);
+        startActivity(intent);
     }
 
     /**
@@ -509,7 +519,7 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
     public void startSessionManager() {
         Intent intent = new Intent(DeviceMonitorActivity.this,
                 SessionManagerActivity.class);
-        startActivityForResult(intent, REQ_SESSION_MANAGER_CODE);
+        startActivity(intent);
     }
 
     /**
