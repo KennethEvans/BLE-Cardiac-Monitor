@@ -322,6 +322,27 @@ public class BCMDbAdapter implements IConstants {
     }
 
     /**
+     * Clears the working database, attaches the new one, copies all data,
+     * detaches the old one.
+     *
+     * @param newFileName Path to the new database.
+     * @param alias       Name for the new database or null to use "SourceDb"
+     */
+    public void replaceDatabase(String newFileName, String alias) {
+        if (alias == null) alias = "TEMP_DB";
+        // Clear the working database
+        recreateDataTable();
+        // Attach the new database
+        mDb.execSQL("ATTACH DATABASE '" + newFileName
+                + "' AS " + alias);
+        // Copy the data
+        mDb.execSQL("INSERT INTO " + DB_DATA_TABLE + " SELECT * FROM "
+                + alias + "." + DB_DATA_TABLE);
+        // Detach the new database
+        mDb.execSQL("DETACH DATABASE " + alias);
+    }
+
+    /**
      * A SQLiteOpenHelper helper to help manage database creation and version
      * management.
      */

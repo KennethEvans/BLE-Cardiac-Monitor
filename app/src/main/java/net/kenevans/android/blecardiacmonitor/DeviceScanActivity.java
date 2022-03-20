@@ -29,13 +29,12 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.List;
 
+import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 /**
  * Activity for scanning and displaying available Bluetooth LE devices.
@@ -46,10 +45,9 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
     private BluetoothAdapter mBluetoothAdapter;
     private boolean mScanning;
     private Handler mHandler;
-    private boolean mFineDenied;
-    private boolean mConnectDenied;
-    private boolean mScanDenied;
     private ListView mListView;
+
+    private boolean mAllPermissionsAsked;
 
     // Launcher for enabling Bluetooth
     private final ActivityResultLauncher<Intent> enableBluetoothLauncher =
@@ -84,7 +82,7 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
         if (!getPackageManager().hasSystemFeature(
                 PackageManager.FEATURE_BLUETOOTH_LE)) {
             String msg = getString(R.string.ble_not_supported);
-            Utils.errMsg(this, msg);
+            Utils.warnMsg(this, msg);
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
             finish();
         }
@@ -116,13 +114,7 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
             return;
         }
 
-//        // Seems to be necessary
-//        ActivityCompat.requestPermissions(this, new String[]
-//                {
-//                        Manifest.permission.ACCESS_FINE_LOCATION,
-//                }, REQ_ACCESS_FINE_LOCATION);
-
-        // Set result CANCELED in case the user backs out
+            // Set result CANCELED in case the user backs out
         setResult(Activity.RESULT_CANCELED);
     }
 
@@ -139,6 +131,13 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
             menu.findItem(R.id.menu_refresh).setActionView(
                     R.layout.actionbar_indeterminate_progress);
         }
+        // Capture global exceptions
+        Thread.setDefaultUncaughtExceptionHandler((paramThread,
+                                                   paramThrowable) -> {
+            Log.e(TAG, "Unexpected exception: ", paramThrowable);
+            // Any non-zero exit code
+            System.exit(2);
+        });
         return true;
     }
 
@@ -161,15 +160,13 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
                 + " mLeDeviceListAdapter=" + Utils.getHashCode(mLeDeviceListAdapter));
         super.onResume();
 
-        // Check location
-        if (!checkFineLocationPermission(this)) return;
-
-        if (Build.VERSION.SDK_INT >= 31) {
-            // Check Scan
-            if (!checkScanPermission(this)) return;
-
-            // Check Connect
-            if (!checkConnectPermission(this)) return;
+        if (!DeviceMonitorActivity.isAllPermissionsGranted(this)) {
+            if (!mAllPermissionsAsked) {
+                mAllPermissionsAsked = true;
+                Utils.warnMsg(this, getString(R.string.permission_not_granted));
+            } else {
+                return;
+            }
         }
 
         // Ensure Bluetooth is enabled on the device. If Bluetooth is not
@@ -196,204 +193,89 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
         super.onPause();
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[]
-            permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions,
-                grantResults);
-        Log.d(TAG, "onRequestPermissionsResult: nPermissions="
-                + permissions.length);
-        for (int i = 0; i < permissions.length; i++) {
-            Log.d(TAG, "    " + permissions[i] + " "
-                    + (grantResults[i] == PackageManager.PERMISSION_GRANTED
-                    ? "Granted" : "Denied"));
-        }
-        if (requestCode == REQ_ACCESS_FINE_LOCATION) {
-            // FINE_LOCATION
-            if (grantResults.length > 0 && grantResults[0] ==
-                    PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, this.getClass().getSimpleName()
-                        + " onRequestPermissionsResult");
-                mFineDenied = false;
-                startScan();
-            } else if (grantResults.length > 0 && grantResults[0] ==
-                    PackageManager.PERMISSION_DENIED) {
-                mFineDenied = true;
-                String msg = "Scanning for devices cannot be done " +
-                        "without LOCATION permission. You can do "
-                        + getString(R.string.menu_select_device)
-                        + " to be prompted for the permission again."
-                        + " You can change the permission in Settings if"
-                        + " you have selected \"don't ask again\".";
-                Utils.warnMsg(this, msg);
-            }
-        }
-        if (requestCode == REQ_ACCESS_COARSE_LOCATION) {
-            // COARSE_LOCATION
-            if (grantResults.length > 0 && grantResults[0] ==
-                    PackageManager.PERMISSION_GRANTED) {
-                mFineDenied = false;
-                startScan();
-            } else if (grantResults.length > 0 && grantResults[0] ==
-                    PackageManager.PERMISSION_DENIED) {
-                mFineDenied = true;
-                String msg = "Scanning for devices cannot be done " +
-                        "without LOCATION permission. You can do "
-                        + getString(R.string.menu_select_device)
-                        + " to be prompted for the permission again."
-                        + " You can change the permission in Settings if"
-                        + " you have selected \"don't ask again\".";
-                Utils.warnMsg(this, msg);
-            }
-        }
-        if (requestCode == REQ_ACCESS_BLUETOOTH_CONNECT) {
-            // BLUETOOTH_CONNECT
-            if (grantResults.length > 0 && grantResults[0] ==
-                    PackageManager.PERMISSION_GRANTED) {
-                mConnectDenied = false;
-                startScan();
-            } else if (grantResults.length > 0 && grantResults[0] ==
-                    PackageManager.PERMISSION_DENIED) {
-                mConnectDenied = true;
-                mFineDenied = true;
-                String msg = "Scanning for devices cannot be done " +
-                        "without BLUETOOTH_CONNECT permission. You can do "
-                        + getString(R.string.menu_select_device)
-                        + " to be prompted for the permission again."
-                        + " You can change the permission in Settings if"
-                        + " you have selected \"don't ask again\".";
-                Utils.warnMsg(this, msg);
-            }
-        }
-        if (requestCode == REQ_ACCESS_BLUETOOTH_SCAN) {
-            // BLUETOOTH_SCAN
-            if (grantResults.length > 0 && grantResults[0] ==
-                    PackageManager.PERMISSION_GRANTED) {
-                mScanDenied = false;
-                startScan();
-            } else if (grantResults.length > 0 && grantResults[0] ==
-                    PackageManager.PERMISSION_DENIED) {
-                mFineDenied = true;
-                String msg = "Scanning for devices cannot be done " +
-                        "without BLUETOOTH_SCAN permission. You can do "
-                        + getString(R.string.menu_select_device)
-                        + " to be prompted for the permission again."
-                        + " You can change the permission in Settings if"
-                        + " you have selected \"don't ask again\".";
-                Utils.warnMsg(this, msg);
-            }
-        }
-    }
-
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    protected boolean checkFineLocationPermission(Activity activity) {
-        // Check location
-        if (ContextCompat.checkSelfPermission(activity,
-                Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            // Permission is not granted
-            if (!mFineDenied) {
-                Log.d(TAG, "checkFineLocationPermission:"
-                        + " ACCESS_FINE_LOCATION not granted,"
-                        + " requesting permission");
-                ActivityCompat.requestPermissions(activity,
-                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                        REQ_ACCESS_FINE_LOCATION);
-            }
-            return false;
-        }
-        return true;
-    }
-
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    protected boolean checkScanPermission(Activity activity) {
-        if (Build.VERSION.SDK_INT <= 31) return true;
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.BLUETOOTH_SCAN)
-                != PackageManager.PERMISSION_GRANTED) {
-            // Permission is not granted
-            if (!mScanDenied) {
-                Log.d(TAG, "checkScanPermission: BLUETOOTH_SCAN not granted,"
-                        + " requesting permission");
-                ActivityCompat.requestPermissions(activity,
-                        new String[]{Manifest.permission.BLUETOOTH_SCAN},
-                        REQ_ACCESS_BLUETOOTH_SCAN);
-            }
-            return false;
-        }
-        return true;
-    }
-
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    protected boolean checkConnectPermission(Activity activity) {
-        if (Build.VERSION.SDK_INT <= 31) return true;
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.BLUETOOTH_CONNECT)
-                != PackageManager.PERMISSION_GRANTED) {
-            // Permission is not granted
-            if (!mConnectDenied) {
-                Log.d(TAG, "checkConnectPermission: BLUETOOTH_SCAN not granted,"
-                        + " requesting permission");
-                ActivityCompat.requestPermissions(activity,
-                        new String[]{Manifest.permission.BLUETOOTH_CONNECT},
-                        REQ_ACCESS_BLUETOOTH_SCAN);
-            }
-            return false;
-        }
-        return true;
-    }
-
     protected void onListItemClick(ListView l, View v, int position, long id) {
+        Log.d(TAG, this.getClass().getSimpleName() + ": onListItemClick");
         final BluetoothDevice device = mLeDeviceListAdapter.getDevice(position);
+        // Stop scanning
+        endScan();
         if (device == null) {
+            Log.d(TAG, "  device is null");
             return;
         }
-        // Stop scanning
-        if (mScanning) {
-            if (Build.VERSION.SDK_INT >= 31) {
-                // Check Scan
-                if (!checkScanPermission(this)) return;
-            }
-            mBluetoothAdapter.getBluetoothLeScanner().stopScan(mLeScanCallback);
-            mScanning = false;
+        String deviceName, deviceAddress;
+        int resultCode;
+        final Intent intent = new Intent();
+        if (Build.VERSION.SDK_INT >= 31 &&
+                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) !=
+                        PackageManager.PERMISSION_GRANTED) {
+            // Do nothing, don't return
+            Log.d(TAG, "  BLUETOOTH_CONNECT not granted");
+            deviceName = "Permission error";
+            deviceAddress = "Permission error";
+            resultCode = RESULT_CANCELED;
+        } else {
+            deviceName = device.getName();
+            deviceAddress = device.getAddress();
+            resultCode = RESULT_OK;
         }
-        final Intent data = new Intent();
-        data.putExtra(DEVICE_NAME_CODE, device.getName());
-        data.putExtra(DEVICE_ADDRESS_CODE, device.getAddress());
-        setResult(RESULT_OK, data);
+                    intent.putExtra(DEVICE_NAME_CODE, deviceName);
+                    intent.putExtra(DEVICE_ADDRESS_CODE, deviceAddress);
+                    setResult(resultCode, intent);
+        Log.d(TAG, "  Calling finish: resultCode="
+                + ActivityResult.resultCodeToString(resultCode)
+                + "  deviceName=" + deviceName);
         finish();
     }
 
     private void endScan() {
-        Log.d(TAG,
-                this.getClass().getSimpleName() + " endScan: mScanning="
-                        + mScanning);
+        Log.d(TAG, this.getClass().getSimpleName()
+                + ": endScan: mScanning=" + mScanning);
+        // Remove the timer
+        mHandler.removeCallbacksAndMessages(null);
         // Stop scanning
         if (mScanning) {
-            if (Build.VERSION.SDK_INT >= 31) {
-                if (!checkScanPermission(this)) return;
+            if (Build.VERSION.SDK_INT >= 31 &&
+                    checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) !=
+                            PackageManager.PERMISSION_GRANTED) {
+                // Do nothing, don't return
+                Log.d(TAG, "  BLUETOOTH_SCAN not granted");
+            } else {
+                mBluetoothAdapter.getBluetoothLeScanner().stopScan(mLeScanCallback);
             }
-            mBluetoothAdapter.getBluetoothLeScanner().stopScan(mLeScanCallback);
         }
         mScanning = false;
         invalidateOptionsMenu();
     }
 
     private void startScan() {
-        Log.d(TAG,
-                this.getClass().getSimpleName() + " startScan: mScanning="
-                        + mScanning);
-        // Check for coarse location permission
-        if (!checkFineLocationPermission(this)) return;
+        Log.d(TAG, this.getClass().getSimpleName()
+                + ": startScan: mScanning=" + mScanning);
+        if (!DeviceMonitorActivity.isAllPermissionsGranted(this)) {
+            if (!mAllPermissionsAsked) {
+                mAllPermissionsAsked = true;
+                Utils.warnMsg(this, getString(R.string.permission_not_granted));
+            } else {
+                return;
+            }
+        }
+
         if (!mScanning) {
             // Stops scanning after a pre-defined scan period.
-            mHandler.postDelayed(() -> {
-                Log.d(TAG, this.getClass().getSimpleName()
-                        + ": startScan: Scanning timed out");
+            // Do nothing, don't return
+            Runnable mTimer = () -> {
+                Log.d(TAG, "Scanning timed out");
+                if (Build.VERSION.SDK_INT >= 31 &&
+                        checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) !=
+                                PackageManager.PERMISSION_GRANTED) {
+                    // Do nothing, don't return
+                    Log.d(TAG, "  BLUETOOTH_SCAN not granted");
+                } else {
+                    mBluetoothAdapter.getBluetoothLeScanner().stopScan(mLeScanCallback);
+                }
                 mScanning = false;
-                mBluetoothAdapter.getBluetoothLeScanner().stopScan(mLeScanCallback);
                 invalidateOptionsMenu();
-            }, DEVICE_SCAN_PERIOD);
+            };
+            mHandler.postDelayed(mTimer, DEVICE_SCAN_PERIOD);
 
             mScanning = true;
             mBluetoothAdapter.getBluetoothLeScanner().startScan(null,
@@ -405,7 +287,6 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
         }
         invalidateOptionsMenu();
     }
-
 
     // Adapter for holding devices found through scanning.
     private class LeDeviceListAdapter extends BaseAdapter {
@@ -464,10 +345,12 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
             }
 
             BluetoothDevice device = mLeDevices.get(i);
-            if (Build.VERSION.SDK_INT >= 31) {
-                if (!checkConnectPermission(DeviceScanActivity.this)) {
-                    return view;
-                }
+            if (Build.VERSION.SDK_INT >= 31 &&
+                    checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) !=
+                            PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, this.getClass().getSimpleName()
+                        + ": getView: BLUETOOTH_CONNECT not granted");
+                return view;
             }
             final String deviceName = device.getName();
             if (deviceName != null && deviceName.length() > 0) {
@@ -489,7 +372,6 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
                     Log.d(TAG, this.getClass().getSimpleName() + ": " +
                             "onScanResult");
                     final BluetoothDevice device = result.getDevice();
-                    String deviceAddress = device.getAddress();
                     runOnUiThread(() -> {
                         mLeDeviceListAdapter.addDevice(device);
                         mLeDeviceListAdapter.notifyDataSetChanged();
@@ -498,15 +380,19 @@ public class DeviceScanActivity extends AppCompatActivity implements IConstants 
 
                 @Override
                 public void onBatchScanResults(List<ScanResult> results) {
-                    Log.d(TAG, "ScanCallback: onBatchScanResults"
+                    Log.d(TAG, this.getClass().getSimpleName()
+                            + ": ScanCallback: onBatchScanResults"
                             + " nResults=" + results.size());
                     // Results is non-null
                     for (ScanResult result : results) {
                         final BluetoothDevice device = result.getDevice();
-                        if (Build.VERSION.SDK_INT >= 31) {
-                            if (!checkConnectPermission(DeviceScanActivity.this)) {
-                                return;
-                            }
+                        if (Build.VERSION.SDK_INT >= 31 &&
+                                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) !=
+                                        PackageManager.PERMISSION_GRANTED) {
+                            Log.d(TAG, this.getClass().getSimpleName()
+                                    + ": onBatchScanResults:"
+                                    + " BLUETOOTH_SCAN not granted");
+                            return;
                         }
                         Log.d(TAG, "    device=" + device.getName()
                                 + " " + device.getAddress());

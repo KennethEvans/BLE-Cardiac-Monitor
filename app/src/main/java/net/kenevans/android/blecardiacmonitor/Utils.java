@@ -24,9 +24,10 @@ package net.kenevans.android.blecardiacmonitor;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.util.Log;
-import android.view.ContextThemeWrapper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -165,7 +166,7 @@ public class Utils implements IConstants {
      */
     @SuppressWarnings("unused")
     public static String getHashCode(Object obj) {
-        if(obj == null) {
+        if (obj == null) {
             return "null";
         }
         return String.format("%08X", obj.hashCode());

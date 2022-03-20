@@ -1,42 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
-      xmlns:app="http://schemas.android.com/apk/res-auto">
-    <item android:id="@+id/menu_connect"
-          android:title="@string/menu_connect"
-          android:orderInCategory="100"
-          app:showAsAction="ifRoom|withText"/>
-    <item android:id="@+id/menu_disconnect"
-          android:title="@string/menu_disconnect"
-          android:orderInCategory="101"
-          app:showAsAction="ifRoom|withText"/>
-    <item android:id="@+id/menu_plot"
-          android:title="@string/menu_plot"
-          android:icon="@drawable/ic_action_plot"
-          android:orderInCategory="1"
-          app:showAsAction="ifRoom"/>
-    <item android:id="@+id/menu_session_manager"
-          android:title="@string/menu_session_manager"
-          android:orderInCategory="2"
-          app:showAsAction="never"/>
-    <item android:id="@+id/menu_select_device"
-          android:title="@string/menu_select_device"
-          android:orderInCategory="3"
-          app:showAsAction="never"/>
-    <item android:id="@+id/menu_read_battery_level"
-          android:title="@string/menu_read_battery_level"
-          android:orderInCategory="4"
-          app:showAsAction="never"/>
-    <item android:id="@+id/info"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/menu_connect"
+        android:orderInCategory="100"
+        android:title="@string/menu_connect"
+        app:showAsAction="ifRoom|withText" />
+    <item
+        android:id="@+id/menu_disconnect"
+        android:orderInCategory="101"
+        android:title="@string/menu_disconnect"
+        app:showAsAction="ifRoom|withText" />
+    <item
+        android:id="@+id/menu_plot"
+        android:icon="@drawable/ic_action_plot"
+        android:orderInCategory="1"
+        android:title="@string/menu_plot"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/menu_session_manager"
+        android:orderInCategory="2"
+        android:title="@string/menu_session_manager"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/menu_select_device"
+        android:orderInCategory="3"
+        android:title="@string/menu_select_device"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/menu_read_battery_level"
+        android:orderInCategory="4"
+        android:title="@string/menu_read_battery_level"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/info"
         android:orderInCategory="5"
         android:title="@string/info_item" />
-    <item android:id="@+id/choose_data_directory"
-        android:orderInCategory="5"
+    <item
+        android:id="@+id/menu_save_database"
+        android:orderInCategory="6"
+        android:title="@string/menu_save_database" />
+    <item
+        android:id="@+id/menu_replace_database"
+        android:orderInCategory="7"
+        android:title="@string/menu_restore_database" />
+    <item
+        android:id="@+id/choose_data_directory"
+        android:orderInCategory="8"
         android:title="@string/choose_data_directory_item" />
-    <item android:id="@+id/help"
-          android:orderInCategory="6"
-          android:title="@string/help_item" />
-    <item android:id="@+id/menu_settings"
-          android:title="@string/menu_settings"
-          android:orderInCategory="50"
-          app:showAsAction="never"/>
+    <item
+        android:id="@+id/help"
+        android:orderInCategory="9"
+        android:title="@string/help_item" />
+    <item
+        android:id="@+id/menu_settings"
+        android:orderInCategory="50"
+        android:title="@string/menu_settings"
+        app:showAsAction="never" />
 </menu>

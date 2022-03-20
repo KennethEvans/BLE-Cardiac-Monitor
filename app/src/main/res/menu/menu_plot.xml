@@ -1,22 +1,25 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
-      xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto">
     <!--
     <item android:id="@+id/menu_start_now"
         app:showAsAction="never"
         android:orderInCategory="1"
         android:title="@string/menu_start_now" />
     -->
-    <item android:id="@+id/menu_zoom_reset"
-          android:icon="@drawable/ic_fullscreen_white_36dp"
-          app:showAsAction="ifRoom"
-          android:orderInCategory="1"
-          android:title="@string/menu_zoom_reset" />
-    <item android:id="@+id/menu_refresh"
-          app:showAsAction="never"
-          android:orderInCategory="2"
-          android:title="@string/menu_refresh" />
-    <item android:id="@+id/get_view_info"
-        app:showAsAction="never"
+    <item
+        android:id="@+id/menu_zoom_reset"
+        android:icon="@drawable/ic_fullscreen_white_36dp"
+        android:orderInCategory="1"
+        android:title="@string/menu_zoom_reset"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/menu_refresh"
+        android:orderInCategory="2"
+        android:title="@string/menu_refresh"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/get_view_info"
         android:orderInCategory="3"
-        android:title="@string/view_info" />
+        android:title="@string/view_info"
+        app:showAsAction="never" />
 </menu>

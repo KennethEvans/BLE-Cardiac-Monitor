@@ -36,11 +36,11 @@ public interface IConstants {
     /**
      * Tag to associate with log messages.
      */
-    String TAG = "BCMMonitor";
-        /**
-         * Name of the package for this application.
-         */
-        String PACKAGE_NAME = "net.kenevans.android.blecardiacmonitor";
+    String TAG = "BCM";
+    /**
+     * Name of the package for this application.
+     */
+    String PACKAGE_NAME = "net.kenevans.android.blecardiacmonitor";
     /**
      * Prefix for session names. Will be followed by a date and time.
      */
@@ -256,21 +256,25 @@ public interface IConstants {
      */
     int REQ_DEVICE_SCAN_MULTIPLE = 0;
     /**
+     * Request code for all permissions.
+     */
+    int REQ_ACCESS_PERMISSIONS = 1;
+    /**
      * Request code for ACCESS_COARSE_LOCATION permission.
      */
-    int REQ_ACCESS_COARSE_LOCATION = 1;
+    int REQ_ACCESS_COARSE_LOCATION = 2;
     /**
      * Request code for ACCESS_FINE_LOCATION permission.
      */
-    int REQ_ACCESS_FINE_LOCATION = 2;
+    int REQ_ACCESS_FINE_LOCATION = 3;
     /**
      * Request code for BLUETOOTH_CONNECT permission.
      */
-    int REQ_ACCESS_BLUETOOTH_CONNECT = 3;
+    int REQ_ACCESS_BLUETOOTH_CONNECT = 4;
     /**
      * Request code for BLUETOOTH_SCAN permission.
      */
-    int REQ_ACCESS_BLUETOOTH_SCAN = 4;
+    int REQ_ACCESS_BLUETOOTH_SCAN = 5;
     /**
      * Request code for selecting a device.
      */

@@ -6,22 +6,39 @@
         android:name="android.hardware.bluetooth_le"
         android:required="false" />
 
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
-        android:minSdkVersion="31" />
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
-        android:minSdkVersion="31" />
-
+    <!-- For below Android 12 -->
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="30"
+        android:targetSdkVersion="31" />
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30"
+        android:targetSdkVersion="31" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30"
+        android:targetSdkVersion="31" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30"
+        android:targetSdkVersion="31" />
+    <!-- For Android 12 and above -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_CONNECT"
+        android:minSdkVersion="31"
+        android:targetSdkVersion="31" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:minSdkVersion="31"
+        android:usesPermissionFlags="neverForLocation" />
 
     <application
         android:allowBackup="true"
         android:icon="@drawable/blecardiacmonitor"
         android:label="@string/app_name"
         android:supportsRtl="false"
-        android:theme="@style/AppTheme" >
+        android:theme="@style/AppTheme">
         <activity
             android:name="net.kenevans.android.blecardiacmonitor.DeviceMonitorActivity"
             android:exported="true">
@@ -30,32 +47,34 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!--suppress CheckTagEmptyBody -->
         <activity
             android:name="net.kenevans.android.blecardiacmonitor.DeviceScanActivity"
             android:label="@string/title_activity_device_scan"
-            android:parentActivityName="net.kenevans.android.blecardiacmonitor.DeviceMonitorActivity" >
-        </activity>
+            android:parentActivityName="net.kenevans.android.blecardiacmonitor.DeviceMonitorActivity"></activity>
+        <!--suppress CheckTagEmptyBody -->
         <activity
             android:name="net.kenevans.android.blecardiacmonitor.PlotActivity"
             android:label="@string/title_activity_plot"
-            android:parentActivityName="net.kenevans.android.blecardiacmonitor.DeviceMonitorActivity" >
-        </activity>
+            android:parentActivityName="net.kenevans.android.blecardiacmonitor.DeviceMonitorActivity"></activity>
+        <!--suppress CheckTagEmptyBody -->
         <activity
             android:name="net.kenevans.android.blecardiacmonitor.SessionManagerActivity"
             android:label="@string/title_activity_session_manager"
-            android:parentActivityName="net.kenevans.android.blecardiacmonitor.DeviceMonitorActivity" >
-        </activity>
+            android:parentActivityName="net.kenevans.android.blecardiacmonitor.DeviceMonitorActivity"></activity>
+        <!--suppress CheckTagEmptyBody -->
         <activity
             android:name="net.kenevans.android.blecardiacmonitor.SettingsActivity"
-            android:label="@string/title_activity_settings" >
-        </activity>
-        <activity android:name=".InfoActivity" android:label="@string/help_title">
-        </activity>
+            android:label="@string/title_activity_settings"></activity>
+        <!--suppress CheckTagEmptyBody -->
+        <activity
+            android:name=".InfoActivity"
+            android:label="@string/help_title"></activity>
 
+        <!--suppress CheckTagEmptyBody -->
         <service
             android:name="net.kenevans.android.blecardiacmonitor.BCMBleService"
-            android:enabled="true" >
-        </service>
+            android:enabled="true"></service>
     </application>
 
 </manifest>

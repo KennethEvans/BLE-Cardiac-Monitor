@@ -85,7 +85,7 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
 //                        Log.d(TAG, "mGattUpdateReceiver:onReceive: " +
 //                                action);
                         addValues(intent);
-                    } else if (BCMBleService.ACTION_ERROR.equals(action)) {
+                    } else if (BCMBleService.ACTION_STATUS.equals(action)) {
 //                        Log.d(TAG, "mGattUpdateReceiver:onReceive: " +
 //                                action);
                         displayError(intent);
@@ -252,7 +252,7 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
     }
 
     /**
-     * Displays the error from an ACTION_ERROR callback.
+     * Displays the error from an ACTION_STATUS callback.
      *
      * @param intent The Intent used to display the error.
      */
@@ -289,7 +289,7 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
                 null, null, null);
         rrFormatter.setLegendIconEnabled(false);
 
-        mPlot.setRangeBoundaries(50, 100, BoundaryMode.AUTO);
+        mPlot.setRangeBoundaries(0, BoundaryMode.FIXED, 100, BoundaryMode.AUTO);
         mPlot.setDomainBoundaries(0, 360000, BoundaryMode.AUTO);
         // Range labels will increment by 10
         mPlot.setRangeStep(StepMode.INCREMENT_BY_VAL, 10);
@@ -413,7 +413,7 @@ public class PlotActivity extends AppCompatActivity implements IConstants,
             }
         }
         if (nErrors > 0) {
-            Utils.errMsg(this, nErrors + " creating RR series");
+            Utils.errMsg(this, nErrors + " error(s) creating RR series");
         }
         if (mPlotHr) {
             Log.d(TAG, "HR series created with " + nHrItems + " items");

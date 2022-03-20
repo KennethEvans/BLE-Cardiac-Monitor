@@ -4,10 +4,10 @@ android {
     compileSdkVersion 31
     defaultConfig {
         applicationId "net.kenevans.android.blecardiacmonitor"
-        minSdkVersion 21
+        minSdkVersion 23
         targetSdkVersion 31
-        versionCode 16
-        versionName "5.4.0"
+        versionCode 18
+        versionName "5.5.1"
     }
     buildTypes {
         release {

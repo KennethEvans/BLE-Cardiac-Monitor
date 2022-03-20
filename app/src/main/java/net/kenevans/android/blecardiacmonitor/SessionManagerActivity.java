@@ -141,9 +141,6 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         } else if (item.getItemId() == R.id.menu_restore_database_cvs) {
             checkRestoreDatabaseFromCvs();
             return true;
-        } else if (item.getItemId() == R.id.menu_save_database) {
-            saveDatabase();
-            return true;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -540,74 +537,6 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
     /**
      * Saves the database as a CSV file with a .txt extension.
      */
-    private void saveDatabase() {
-        SharedPreferences prefs = getSharedPreferences(MAIN_ACTIVITY,
-                MODE_PRIVATE);
-        String treeUriStr = prefs.getString(PREF_TREE_URI, null);
-        if (treeUriStr == null) {
-            Utils.errMsg(this, "There is no data directory set");
-            return;
-        }
-        FileInputStream inputStream = null;
-        OutputStream outputStream = null;
-        try {
-            String format = "yyyy-MM-dd_HH:mm:ss";
-            SimpleDateFormat df = new SimpleDateFormat(format, Locale.US);
-            Date now = new Date();
-            String fileName = String.format(saveDatabaseTemplate,
-                    df.format(now));
-            Uri treeUri = Uri.parse(treeUriStr);
-            String treeDocumentId =
-                    DocumentsContract.getTreeDocumentId(treeUri);
-            Uri docTreeUri =
-                    DocumentsContract.buildDocumentUriUsingTree(treeUri,
-                            treeDocumentId);
-            ContentResolver resolver = this.getContentResolver();
-            Uri docUri = DocumentsContract.createDocument(resolver, docTreeUri,
-                    "application/vnd.sqlite3", fileName);
-            if (docUri == null) {
-                Utils.errMsg(this, "Could not create document Uri");
-                return;
-            }
-            Log.d(TAG, "saveDatabase: docUri=" + docUri);
-            try {
-                // Close the database
-                if (mDbAdapter != null) {
-                    mDbAdapter.close();
-                }
-                File file = new File(getExternalFilesDir(null), DB_NAME);
-                inputStream = new FileInputStream(file);
-                ParcelFileDescriptor pfd = getContentResolver().
-                        openFileDescriptor(docUri, "w");
-                outputStream =
-                        new FileOutputStream(pfd.getFileDescriptor());
-                byte[] buff = new byte[1024];
-                int read;
-                while ((read = inputStream.read(buff, 0, buff.length)) > 0)
-                    outputStream.write(buff, 0, read);
-            } catch (Exception ex) {
-                String msg =
-                        "Failed to save database";
-                Utils.excMsg(this, msg, ex);
-                Log.e(TAG, msg, ex);
-            } finally {
-                if (inputStream != null) inputStream.close();
-                if (outputStream != null) outputStream.close();
-                if (mDbAdapter != null) {
-                    mDbAdapter.open();
-                }
-            }
-            Utils.infoMsg(this, "Wrote " + docUri.getLastPathSegment());
-        } catch (Exception ex) {
-            String msg = "Error saving to SD card";
-            Utils.excMsg(this, msg, ex);
-            Log.e(TAG, msg, ex);
-        }
-    }
-
-    /**
-     * Saves the database as a CSV file with a .txt extension.
-     */
     private void saveDatabaseAsCsv() {
         // Get the saved tree Uri
         SharedPreferences prefs = getSharedPreferences(MAIN_ACTIVITY,
@@ -948,8 +877,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
                         }
                         rr = tokens[3].trim();
                         // Write the row
-                        long id = mDbAdapter.createData(dateNum, startDateNum
-                                , hr,
+                        long id = mDbAdapter.createData(dateNum, startDateNum, hr,
                                 rr);
                         if (id < 0) {
                             mErrors++;

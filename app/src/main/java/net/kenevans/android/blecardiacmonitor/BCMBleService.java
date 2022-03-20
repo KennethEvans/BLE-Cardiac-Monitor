@@ -16,6 +16,7 @@
 
 package net.kenevans.android.blecardiacmonitor;
 
+import android.Manifest;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -31,6 +32,7 @@ import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
@@ -82,7 +84,7 @@ public class BCMBleService extends Service implements IConstants {
             + ".ACTION_GATT_SERVICES_DISCOVERED";
     public final static String ACTION_DATA_AVAILABLE = PACKAGE_NAME
             + ".ACTION_DATA_AVAILABLE";
-    public final static String ACTION_ERROR = PACKAGE_NAME + ".ACTION_ERROR";
+    public final static String ACTION_STATUS = PACKAGE_NAME + ".ACTION_STATUS";
 
     /**
      * Implements callback methods for GATT events.
@@ -90,46 +92,90 @@ public class BCMBleService extends Service implements IConstants {
     private final BluetoothGattCallback mGattCallback = new
             BluetoothGattCallback() {
                 @Override
-                public void onConnectionStateChange(BluetoothGatt gatt, int
-                        status,
-                                                    int newState) {
+                public void onConnectionStateChange(BluetoothGatt gatt,
+                                                    int status, int newState) {
                     Log.i(TAG, "onConnectionStateChange: status="
-                            + (status == BluetoothGatt.GATT_SUCCESS ?
-                            "GATT_SUCCESS"
-                            : status));
-                    if (status != BluetoothGatt.GATT_SUCCESS) {
-                        Log.i(TAG,
-                                "onConnectionStateChange: Aborting: status is" +
-                                        " not " +
-                                        "GATT_SUCCESS");
+                            + getGattStatusString(status)
+                            + " newState=" + getGattNewStateString(newState));
+                    BluetoothDevice device = gatt.getDevice();
+                    if (Build.VERSION.SDK_INT >= 31 &&
+                            checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) !=
+                                    PackageManager.PERMISSION_GRANTED) {
+                        Log.d(TAG, "onConnectionStateChange: " +
+                                "BLUETOOTH_CONNECT not granted");
+                    } else {
+                        if (device != null) {
+                            String address = device.getAddress();
+                            Log.d(TAG, "  mBluetoothDeviceAddress="
+                                    + mBluetoothDeviceAddress
+                                    + " address=" + address
+                                    + " name=" + device.getName()
+                                    + " newState="
+                                    + getGattNewStateString(newState));
+                        } else {
+                            Log.d(TAG, "  mBluetoothDeviceAddress="
+                                    + mBluetoothDeviceAddress
+                                    + " device is null (no address)"
+                                    + " newState="
+                                    + getGattNewStateString(newState));
+                        }
+                    }
+                    if (status == BluetoothGatt.GATT_SUCCESS) {
+                        // Clear the errors
+                        broadcastStatus("");
+                    } else {
+                        String msg = "Aborting, status="
+                                + getGattStatusString(status)
+                                + " newState=" + getGattNewStateString(newState);
+                        Log.i(TAG, msg);
+                        if (Build.VERSION.SDK_INT >= 31 &&
+                                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) !=
+                                        PackageManager.PERMISSION_GRANTED) {
+                            Log.d(TAG, "onConnectionStateChange: " +
+                                    "BLUETOOTH_CONNECT not granted");
+
+                        } else {
+                            gatt.close();
+                        }
+                        broadcastStatus(msg);
                         return;
                     }
                     String intentAction;
                     if (newState == BluetoothProfile.STATE_CONNECTED) {
-                        intentAction = ACTION_GATT_CONNECTED;
-                        mConnectionState = BluetoothProfile.STATE_CONNECTED;
-                        // Stop any session
-                        stopSession();
-                        broadcastUpdate(intentAction);
                         Log.i(TAG, "onConnectionStateChange: Connected to " +
                                 "GATT server");
-                        // Attempts to discover services after successful
-                        // connection.
-                        Log.i(TAG,
-                                "onConnectionStateChange: Attempting to start" +
-                                        " service" +
-                                        " discovery: "
-                                        + mBluetoothGatt.discoverServices());
-                    } else if (newState == BluetoothProfile
-                            .STATE_DISCONNECTED) {
-                        intentAction = ACTION_GATT_DISCONNECTED;
-                        mConnectionState = BluetoothProfile.STATE_DISCONNECTED;
-                        Log.i(TAG,
-                                "onConnectionStateChange: Disconnected from " +
-                                        "GATT " +
-                                        "server");
                         // Stop any session
                         stopSession();
+                        intentAction = ACTION_GATT_CONNECTED;
+                        mConnectionState = BluetoothProfile.STATE_CONNECTED;
+                        broadcastUpdate(intentAction);
+                        // Attempts to discover services after successful
+                        // connection.
+                        if (Build.VERSION.SDK_INT >= 31 &&
+                                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) !=
+                                        PackageManager.PERMISSION_GRANTED) {
+                            Log.d(TAG, "BluetoothGattCallback: " +
+                                    "onConnectionStateChange: " +
+                                    "BLUETOOTH_CONNECT not granted");
+                            return;
+                        }
+                        Log.i(TAG,
+                                "onConnectionStateChange: Attempting to start"
+                                        + " service discovery: "
+                                        + mBluetoothGatt.discoverServices());
+                    } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                        Log.i(TAG,
+                                "onConnectionStateChange: Disconnected from "
+                                        + "GATT server");
+                        // Stop any session
+                        stopSession();
+                        // Close the device. We are through with it.
+                        if (device != null) {
+                            gatt.close();
+                        }
+                        mBluetoothGatt = null;
+                        mConnectionState = BluetoothProfile.STATE_DISCONNECTED;
+                        intentAction = ACTION_GATT_DISCONNECTED;
                         broadcastUpdate(intentAction);
                     }
                 }
@@ -140,7 +186,8 @@ public class BCMBleService extends Service implements IConstants {
                     if (status == BluetoothGatt.GATT_SUCCESS) {
                         broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
                     } else {
-                        Log.w(TAG, "onServicesDiscovered received: " + status);
+                        Log.w(TAG, "onServicesDiscovered received: "
+                                + getGattStatusString(status));
                     }
                 }
 
@@ -151,21 +198,31 @@ public class BCMBleService extends Service implements IConstants {
                                                          status) {
                     characteristicReadQueue.remove();
                     if (status == BluetoothGatt.GATT_SUCCESS) {
-                        broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+                        broadcastCharisticUpdate(ACTION_DATA_AVAILABLE,
+                                characteristic);
                     } else {
-                        Log.w(TAG, "onCharacteristicRead received: " + status);
+                        Log.w(TAG, "onCharacteristicRead received: "
+                                + getGattStatusString(status));
                     }
                     if (characteristicReadQueue.size() > 0)
-                        mBluetoothGatt.readCharacteristic
-                                (characteristicReadQueue
-                                        .element());
+                        if (Build.VERSION.SDK_INT >= 31 &&
+                                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) !=
+                                        PackageManager.PERMISSION_GRANTED) {
+                            Log.d(TAG, "BluetoothGattCallback: " +
+                                    "onCharacteristicRead: " +
+                                    "BLUETOOTH_CONNECT not granted");
+                            return;
+                        }
+                    mBluetoothGatt.readCharacteristic(characteristicReadQueue
+                            .element());
                 }
 
                 @Override
                 public void onCharacteristicChanged(BluetoothGatt gatt,
                                                     BluetoothGattCharacteristic
                                                             characteristic) {
-                    broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+                    broadcastCharisticUpdate(ACTION_DATA_AVAILABLE,
+                            characteristic);
                 }
 
                 @Override
@@ -174,20 +231,29 @@ public class BCMBleService extends Service implements IConstants {
                                                       descriptor, int
                                                       status) {
                     if (status != BluetoothGatt.GATT_SUCCESS) {
-                        Log.d(TAG, "onDescriptorWrite: Error writing GATT " +
-                                "Descriptor: "
-                                + status);
+                        Log.d(TAG, "onDescriptorWrite: status="
+                                + getGattStatusString(status));
+
                     }
                     // Pop the item that we just finishing writing
                     descriptorWriteQueue.remove();
                     // Check if there is more to write
-                    if (descriptorWriteQueue.size() > 0)
+                    if (descriptorWriteQueue.size() > 0) {
+                        if (Build.VERSION.SDK_INT >= 31 &&
+                                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) !=
+                                        PackageManager.PERMISSION_GRANTED) {
+                            Log.d(TAG, "BluetoothGattCallback: " +
+                                    "onDescriptorWrite: " +
+                                    "BLUETOOTH_CONNECT not granted");
+                            return;
+                        }
                         mBluetoothGatt.writeDescriptor(descriptorWriteQueue
                                 .element());
-                    else if (characteristicReadQueue.size() > 0)
+                    } else if (characteristicReadQueue.size() > 0) {
                         mBluetoothGatt.readCharacteristic
                                 (characteristicReadQueue
                                         .element());
+                    }
                 }
             };
 
@@ -197,15 +263,21 @@ public class BCMBleService extends Service implements IConstants {
         // Post a notification the service is running
         String channnelId = createNotificationChannel(this);
         Intent activityIntent = new Intent(this, DeviceMonitorActivity.class);
-        PendingIntent viewPendingIntent = PendingIntent.getActivity(this, 0,
-                activityIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent pendingIntent;
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            pendingIntent = PendingIntent.getActivity(this, 0, activityIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        } else {
+            pendingIntent = PendingIntent.getActivity(this, 0, activityIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT);
+        }
         NotificationCompat.Builder notificationBuilder = new
                 NotificationCompat.Builder(
                 this, channnelId)
                 .setSmallIcon(R.drawable.blecardiacmonitor)
                 .setContentTitle(getString(R.string.service_notification_title))
                 .setContentText(getString(R.string.service_notification_text))
-                .setContentIntent(viewPendingIntent);
+                .setContentIntent(pendingIntent);
         NotificationManagerCompat notificationManager =
                 NotificationManagerCompat
                         .from(this);
@@ -216,7 +288,7 @@ public class BCMBleService extends Service implements IConstants {
     public String createNotificationChannel(Context context) {
         // NotificationChannels are required for Notifications on O (API 26)
         // and above.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= 26) {
             // The user-visible name of the channel.
             CharSequence channelName = getString(R.string.app_name);
             // The user-visible description of the channel.
@@ -259,25 +331,39 @@ public class BCMBleService extends Service implements IConstants {
         super.onDestroy();
     }
 
-    // /**
-    // * Broadcast an error using ACTION_ERROR.
-    // *
-    // * @param msg
-    // */
-    // private void broadcastError(final String msg) {
-    // final Intent intent = new Intent(ACTION_ERROR);
-    // intent.putExtra(EXTRA_MSG, msg);
-    // sendBroadcast(intent);
-    // }
+    /**
+     * Broadcast a message using ACTION_STATUS.
+     *
+     * @param msg The message.
+     */
+    private void broadcastStatus(final String msg) {
+        Log.d(TAG, "broadcastStatus: " + msg);
+        final Intent intent = new Intent(ACTION_STATUS);
+        intent.putExtra(EXTRA_MSG, msg);
+        sendBroadcast(intent);
+    }
 
+    /**
+     * Broadcasts an update for an action. Used for
+     * ACTION_GATT_CONNECTED, ACTION_GATT_DISCONNECTED,
+     * and ACTION_GATT_SERVICES_DISCOVERED.
+     *
+     * @param action The action string.
+     */
     private void broadcastUpdate(final String action) {
         final Intent intent = new Intent(action);
         sendBroadcast(intent);
     }
 
-    private void broadcastUpdate(final String action,
-                                 final BluetoothGattCharacteristic
-                                         characteristic) {
+    /**
+     * Broadcasts an update for ACTION_DATA_AVAILABLE.
+     *
+     * @param action         The action.
+     * @param characteristic The characteristic.
+     */
+    private void broadcastCharisticUpdate(final String action,
+                                          final BluetoothGattCharacteristic
+                                                  characteristic) {
         Date now = new Date();
         long date = now.getTime();
         // // DEBUG
@@ -297,19 +383,18 @@ public class BCMBleService extends Service implements IConstants {
             // Log.d(TAG, String.format("Received heart rate measurement: %d",
             // mLastHr));
             if (mDbAdapter != null) {
-                mDbAdapter.createData(mLastHrDate, mSessionStartTime, mLastHr,
-                        mLastRr);
+                mDbAdapter.createData(mLastHrDate, mSessionStartTime,
+                        mLastHr, mLastRr);
             }
-            intent.putExtra(EXTRA_HR, String.valueOf(values.getHr() + dateStr));
+            intent.putExtra(EXTRA_HR, values.getHr() + dateStr);
             intent.putExtra(EXTRA_RR, values.getRr() + dateStr);
             intent.putExtra(EXTRA_DATA, values.getInfo());
         } else if (UUID_BATTERY_LEVEL.equals(characteristic.getUuid())) {
             mLastBat = characteristic.getIntValue(
                     BluetoothGattCharacteristic.FORMAT_UINT8, 0);
             Log.d(TAG, String.format("Received battery level: %d", mLastBat));
-            intent.putExtra(EXTRA_BAT, String.valueOf(mLastBat) + dateStr);
-            intent.putExtra(EXTRA_DATA,
-                    String.valueOf("Battery Level: " + mLastBat));
+            intent.putExtra(EXTRA_BAT, mLastBat + dateStr);
+            intent.putExtra(EXTRA_DATA, "Battery Level: " + mLastBat);
         } else {
             // For all other profiles, writes the data formatted in HEX.
             final byte[] data = characteristic.getValue();
@@ -319,21 +404,14 @@ public class BCMBleService extends Service implements IConstants {
                 for (byte byteChar : data) {
                     stringBuilder.append(String.format("%02X ", byteChar));
                 }
-                intent.putExtra(
-                        EXTRA_DATA,
-                        BleNamesResolver
-                                .resolveCharacteristicName(characteristic
-                                        .getUuid().toString())
-                                + "\n"
-                                + new String(data)
-                                + "\n"
-                                + stringBuilder.toString());
+                intent.putExtra(EXTRA_DATA,
+                        BleNamesResolver.resolveCharacteristicName(
+                                characteristic.getUuid().toString())
+                                + "\n" + new String(data) + "\n" + stringBuilder);
             } else {
-                intent.putExtra(
-                        EXTRA_DATA,
-                        BleNamesResolver
-                                .resolveCharacteristicName(characteristic
-                                        .getUuid().toString())
+                intent.putExtra(EXTRA_DATA,
+                        BleNamesResolver.resolveCharacteristicName(
+                                characteristic.getUuid().toString())
                                 + "\n" + ((data == null) ? "null" : "No data"));
             }
         }
@@ -418,7 +496,8 @@ public class BCMBleService extends Service implements IConstants {
      * callback.
      */
     public boolean connect(final String address) {
-        Log.d(TAG, "connect");
+        Log.d(TAG, "connect: mConnectionState="
+                + getGattNewStateString(mConnectionState));
         if (mBluetoothAdapter == null || address == null) {
             Log.w(TAG,
                     "connect: BluetoothAdapter not initialized or unspecified" +
@@ -429,57 +508,108 @@ public class BCMBleService extends Service implements IConstants {
         // Previously connected device. Try to reconnect.
         if (mBluetoothDeviceAddress != null
                 && address.equals(mBluetoothDeviceAddress)
-                && mBluetoothGatt != null) {
+                && mBluetoothGatt != null && mBluetoothGatt.getDevice() != null) {
             Log.d(TAG,
-                    "connect: Trying to use an existing mBluetoothGatt for " +
-                            "connection");
+                    "connect: Trying to reconnect to an existing connection");
+            if (Build.VERSION.SDK_INT >= 31 &&
+                    checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) !=
+                            PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "connect: " +
+                        "BLUETOOTH_CONNECT not granted");
+                return false;
+            }
+            BluetoothDevice device = mBluetoothGatt.getDevice();
+            Log.d(TAG, "connect: Existing connection name is "
+                    + mBluetoothGatt.getDevice().getName());
             if (mBluetoothGatt.connect()) {
-                mConnectionState = BluetoothProfile.STATE_CONNECTING;
+                mConnectionState =
+                        mBluetoothManager.getConnectionState(device,
+                                BluetoothProfile.GATT);
                 return true;
             } else {
                 return false;
             }
         }
 
+        // Check if there is a connected device with a different address
+        if (!address.equals(mBluetoothDeviceAddress) && mBluetoothGatt != null) {
+            Log.d(TAG, "connect: Disconnecting and closing current device "
+                    + mBluetoothDeviceAddress);
+            mBluetoothGatt.disconnect();
+            mBluetoothGatt.close();
+            mBluetoothGatt = null;
+        }
+
+        // Not previously connected
         final BluetoothDevice device = mBluetoothAdapter
                 .getRemoteDevice(address);
         if (device == null) {
-            Log.w(TAG, "Device not found.  Unable to connect");
+            Log.w(TAG, "connect: Device not found. Unable to connect");
+            return false;
+        }
+
+        if (Build.VERSION.SDK_INT >= 31 &&
+                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) !=
+                        PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "connect: " +
+                    "BLUETOOTH_CONNECT not granted");
             return false;
         }
         // We want to directly connect to the device, so we are setting the
-        // autoConnect parameter to false.
-        mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
+        // autoConnect parameter to false and specifying TRANSPORT_LE
+        // (default is AUTO)
+        mBluetoothGatt = device.connectGatt(this, false, mGattCallback,
+                BluetoothDevice.TRANSPORT_LE);
         Log.d(TAG, "Trying to create a new connection");
         mBluetoothDeviceAddress = address;
-        mConnectionState = BluetoothProfile.STATE_CONNECTING;
+        mConnectionState = mBluetoothManager.getConnectionState(device,
+                BluetoothProfile.GATT);
         return true;
     }
 
     /**
-     * Disconnects an existing connection or cancel a pending connection. The
-     * disconnection result is reported asynchronously through the
-     * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth
-     * .BluetoothGatt, int, int)}
-     * callback.
+     * Disconnects an existing connection or cancels a pending connection.
+     * The disconnection result is reported asynchronously through the
+     * {@code BluetoothGattCallback#onConnectionStateChange(android
+     * .bluetooth.BluetoothGatt, int, int)} callback.
      */
     public void disconnect() {
-        Log.d(TAG, "disconnect");
-        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+        Log.d(TAG, "disconnect: mConnectionState="
+                + getGattNewStateString(mConnectionState));
+        if (mBluetoothAdapter == null) {
             Log.w(TAG, "BluetoothAdapter not initialized");
+            return;
+        }
+        if (mBluetoothGatt == null) {
+            Log.w(TAG, "disconnect: mBluetoothGatt is null, cannot disconnect");
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= 31 &&
+                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) !=
+                        PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "disconnect: " +
+                    "BLUETOOTH_CONNECT not granted");
             return;
         }
         mBluetoothGatt.disconnect();
     }
 
     /**
-     * After using a given BLE device, the app must call this method to ensure
+     * After using a given BLE device, the app must call this method to
+     * ensure
      * resources are released properly.
      */
     public void close() {
         Log.d(TAG, "close");
         stopDatabase();
         if (mBluetoothGatt == null) {
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= 31 &&
+                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) !=
+                        PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "close: " +
+                    "BLUETOOTH_CONNECT not granted");
             return;
         }
         mBluetoothGatt.close();
@@ -498,19 +628,25 @@ public class BCMBleService extends Service implements IConstants {
             Log.w(TAG, "BluetoothAdapter not initialized");
             return;
         }
+        if (Build.VERSION.SDK_INT >= 31 &&
+                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) !=
+                        PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "setCharacteristicNotification: "
+                    + "BLUETOOTH_CONNECT not granted");
+            return;
+        }
         boolean res = mBluetoothGatt.setCharacteristicNotification(
                 characteristic, enabled);
         if (!res) {
-            Log.d(TAG,
-                    "setCharacteristicNotification failed for "
-                            + BleNamesResolver
-                            .resolveCharacteristicName(characteristic
-                                    .getUuid().toString()));
+            Log.d(TAG, "setCharacteristicNotification failed for "
+                    + BleNamesResolver.resolveCharacteristicName(
+                    characteristic.getUuid().toString()));
         }
     }
 
     /**
-     * Retrieves a list of supported GATT services on the connected device. This
+     * Retrieves a list of supported GATT services on the connected
+     * device. This
      * should be invoked only after {@code BluetoothGatt#discoverServices()}
      * completes successfully.
      *
@@ -533,6 +669,15 @@ public class BCMBleService extends Service implements IConstants {
     }
 
     /**
+     * Returns the device address.
+     *
+     * @return The device address (may be null).
+     */
+    public String getDeviceAddress() {
+        return mBluetoothDeviceAddress;
+    }
+
+    /**
      * Writes READ, NOTIFY, WRITE properties to the Log. Use for debugging.
      *
      * @param charBat    The BAT characteristic.
@@ -540,9 +685,9 @@ public class BCMBleService extends Service implements IConstants {
      * @param charCustom The custom characteristic.
      */
     @SuppressWarnings("unused")
-    public void checkPermissions(BluetoothGattCharacteristic charBat,
-                                 BluetoothGattCharacteristic charHr,
-                                 BluetoothGattCharacteristic charCustom) {
+    public void checkCharPermissions(BluetoothGattCharacteristic charBat,
+                                     BluetoothGattCharacteristic charHr,
+                                     BluetoothGattCharacteristic charCustom) {
         // DEBUG
         // Check permissions
         if ((charBat.getProperties() & BluetoothGattCharacteristic
@@ -625,6 +770,13 @@ public class BCMBleService extends Service implements IConstants {
         // Otherwise handle it asynchronously
         if (descriptorWriteQueue.size() == 0
                 || characteristicReadQueue.size() == 1) {
+            if (Build.VERSION.SDK_INT >= 31 &&
+                    checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) !=
+                            PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "readBatteryLevel: " +
+                        "BLUETOOTH_CONNECT not granted");
+                return;
+            }
             mBluetoothGatt
                     .readCharacteristic(characteristicReadQueue.element());
         }
@@ -661,7 +813,8 @@ public class BCMBleService extends Service implements IConstants {
         // Log.d(TAG, "  charBat=" + batVal + " charHr=" + hrVal +
         // " charCustom="
         // + customVal);
-        // Log.d(TAG, "  mDoBat=" + mDoBat + " mDoHr=" + mDoHr + " mDoCustom="
+        // Log.d(TAG, "  mDoBat=" + mDoBat + " mDoHr=" + mDoHr + "
+        // mDoCustom="
         // + mDoCustom);
         if (!mSessionInProgress) {
             mSessionStartTime = new Date().getTime();
@@ -704,8 +857,16 @@ public class BCMBleService extends Service implements IConstants {
             setCharacteristicNotification(mCharHr, true);
         }
 
-        // Start the queues. Do writeDescriptors before any readCharacteristics
+        // Start the queues. Do writeDescriptors before any
+        // readCharacteristics
         if (descriptorWriteQueue.size() > 0) {
+            if (Build.VERSION.SDK_INT >= 31 &&
+                    checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) !=
+                            PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "startSession: " +
+                        "BLUETOOTH_CONNECT not granted");
+                return false;
+            }
             mBluetoothGatt.writeDescriptor(descriptorWriteQueue.element());
         } else if (characteristicReadQueue.size() > 0) {
             mBluetoothGatt
@@ -739,4 +900,53 @@ public class BCMBleService extends Service implements IConstants {
         mSessionInProgress = false;
     }
 
+    /**
+     * Get a String value for the given GATT status.
+     *
+     * @param status The status.
+     * @return The string value.
+     */
+    public static String getGattStatusString(int status) {
+        switch (status) {
+            case BluetoothGatt.GATT_SUCCESS:
+                return "GATT_SUCCESS";
+            case BluetoothGatt.GATT_READ_NOT_PERMITTED:
+                return "GATT_READ_NOT_PERMITTED";
+            case BluetoothGatt.GATT_WRITE_NOT_PERMITTED:
+                return "GATT_WRITE_NOT_PERMITTED";
+            case BluetoothGatt.GATT_INSUFFICIENT_AUTHENTICATION:
+                return "GATT_INSUFFICIENT_AUTHENTICATION";
+            case BluetoothGatt.GATT_REQUEST_NOT_SUPPORTED:
+                return "GATT_REQUEST_NOT_SUPPORTED";
+            case BluetoothGatt.GATT_INSUFFICIENT_ENCRYPTION:
+                return "GATT_INSUFFICIENT_ENCRYPTION";
+            case BluetoothGatt.GATT_INVALID_OFFSET:
+                return "GATT_INVALID_OFFSET";
+            case BluetoothGatt.GATT_INVALID_ATTRIBUTE_LENGTH:
+                return "GATT_INVALID_ATTRIBUTE_LENGTH";
+            case BluetoothGatt.GATT_CONNECTION_CONGESTED:
+                return "GATT_CONNECTION_CONGESTED";
+            case BluetoothGatt.GATT_FAILURE:
+                return "GATT_FAILURE";
+            default:
+                return "GATT_UNKNOWN(" + status + ")";
+        }
+    }
+
+    /**
+     * Get a String value for the given GATT newState.
+     *
+     * @param newState The newState.
+     * @return The string value.
+     */
+    public static String getGattNewStateString(int newState) {
+        switch (newState) {
+            case BluetoothProfile.STATE_DISCONNECTED:
+                return "STATE_DISCONNECTED";
+            case BluetoothProfile.STATE_CONNECTED:
+                return "STATE_CONNECTED";
+            default:
+                return "STATE_UNKNOWN(" + newState + ")";
+        }
+    }
 }
