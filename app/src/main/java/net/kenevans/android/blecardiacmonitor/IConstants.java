@@ -30,7 +30,7 @@ import java.util.UUID;
  */
 public interface IConstants {
     /**
-     * Used for
+     * Used for SharedPreferences
      */
     String MAIN_ACTIVITY = "DeviceMonitorActivity";
     /**

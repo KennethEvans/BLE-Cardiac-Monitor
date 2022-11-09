@@ -5,7 +5,6 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
@@ -21,7 +20,6 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
@@ -30,16 +28,11 @@ import android.widget.TextView;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -647,7 +640,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
             return;
         }
 
-        final List<UriData> uriList;
+        final List<UriUtils.UriData> uriList;
         try {
             uriList = getUriList(this);
         } catch (Exception ex) {
@@ -663,7 +656,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         // Sort them by date with newest first
         final int len = uriList.size();
         Collections.sort(uriList, (data1, data2) ->
-                Long.compare(data2.lastModified, data1.lastModified));
+                Long.compare(data2.modifiedTime, data1.modifiedTime));
 
         // Prompt for the file to use
         final CharSequence[] items = new CharSequence[uriList.size()];
@@ -720,7 +713,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
      * @param context The context.
      * @return The list.
      */
-    public static List<UriData> getUriList(Context context) {
+    public static List<UriUtils.UriData> getUriList(Context context) {
         ContentResolver contentResolver = context.getContentResolver();
         SharedPreferences prefs = context.getSharedPreferences(
                 "DeviceMonitorActivity", Context.MODE_PRIVATE);
@@ -733,7 +726,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         Uri childrenUri =
                 DocumentsContract.buildChildDocumentsUriUsingTree(treeUri,
                         DocumentsContract.getTreeDocumentId(treeUri));
-        List<UriData> uriList = new ArrayList<>();
+        List<UriUtils.UriData> uriList = new ArrayList<>();
         String[] projection = {
                 DocumentsContract.Document.COLUMN_DOCUMENT_ID,
                 DocumentsContract.Document.COLUMN_DISPLAY_NAME,
@@ -767,8 +760,8 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
                 }
                 if (displayName.startsWith(SAVE_DATABASE_FILENAME_PREFIX)
                         && displayName.endsWith(SAVE_DATABASE_FILENAME_SUFFIX)) {
-                    uriList.add(new UriData(documentUri, displayName,
-                            lastModified));
+                    uriList.add(new UriUtils.UriData(documentUri, lastModified,
+                            displayName));
                 }
             }
         }
@@ -785,8 +778,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
     }
 
     /**
-     * Class to handle getting the bitmap from the web using a progress
-     * bar that can be cancelled.<br>
+     * Class to handle restore using a progress bar that can be cancelled.<br>
      * <br>
      * Call with <b>Bitmap bitmap = new MyUpdateTask().execute(String)<b>
      */
@@ -877,7 +869,8 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
                         }
                         rr = tokens[3].trim();
                         // Write the row
-                        long id = mDbAdapter.createData(dateNum, startDateNum, hr,
+                        long id = mDbAdapter.createData(dateNum, startDateNum
+                                , hr,
                                 rr);
                         if (id < 0) {
                             mErrors++;
@@ -1124,7 +1117,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         }
 
         /**
-         * Get a list of checked sessions.
+         * Get a list of sessions.
          *
          * @return List of sessions.
          */
@@ -1156,26 +1149,5 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
         CheckBox sessionCheckbox;
         TextView sessionStart;
         TextView sessionDuration;
-    }
-
-    /**
-     * Convenience class for managing Uri information.
-     */
-    public static class UriData {
-        final public Uri uri;
-        final public String displayName;
-        final public long lastModified;
-
-        UriData(Uri uri, String displayName, long lastModified) {
-            this.uri = uri;
-            this.displayName = displayName;
-            this.lastModified = lastModified;
-        }
-
-        @androidx.annotation.NonNull
-        @Override
-        public String toString() {
-            return displayName;
-        }
     }
 }
