@@ -220,7 +220,7 @@ public class SessionManagerActivity extends AppCompatActivity implements IConsta
                 // Create the document
                 Uri docUri = DocumentsContract.createDocument(resolver,
                         docTreeUri,
-                        "test/csv", fileName);
+                        "text/csv", fileName);
                 pfd = getContentResolver().
                         openFileDescriptor(docUri, "w");
                 try (FileWriter writer =
