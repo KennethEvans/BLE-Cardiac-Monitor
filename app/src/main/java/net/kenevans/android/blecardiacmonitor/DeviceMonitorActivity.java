@@ -677,6 +677,7 @@ public class DeviceMonitorActivity extends AppCompatActivity implements IConstan
      * Show the help.
      */
     private void showHelp() {
+        Log.d(TAG, this.getClass().getSimpleName() + ": showHelp:");
         try {
             // Start theInfoActivity
             Intent intent = new Intent();
